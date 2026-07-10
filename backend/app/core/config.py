@@ -1,8 +1,8 @@
 from functools import lru_cache
-from typing import Any, Self
+from typing import Annotated, Any, Self
 
 from pydantic import field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 DEFAULT_SECRET_KEY = "local-development-secret-key-change-me"
@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     ai_ollama_model: str = "llama3.2"
     ai_timeout_seconds: int = 20
     ai_external_data_enabled: bool = False
-    cors_origins: list[str] = [
+    cors_origins: Annotated[list[str], NoDecode] = [
         "http://localhost:8081",
         "http://127.0.0.1:8081",
         "http://localhost:19006",

@@ -35,6 +35,14 @@ def test_settings_reject_unknown_ai_provider(monkeypatch) -> None:
         Settings()
 
 
+def test_settings_parse_cors_origins_from_comma_separated_env(monkeypatch) -> None:
+    monkeypatch.setenv("APP_CORS_ORIGINS", "https://zenith.vercel.app, https://preview.example.com")
+
+    settings = Settings()
+
+    assert settings.cors_origins == ["https://zenith.vercel.app", "https://preview.example.com"]
+
+
 def test_settings_require_ai_external_data_flag_for_non_internal_provider_in_production(monkeypatch) -> None:
     monkeypatch.setenv("APP_ENVIRONMENT", "production")
     monkeypatch.setenv("APP_SECRET_KEY", "production-secret-key")

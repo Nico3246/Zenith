@@ -1,0 +1,281 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => {
+  const state: { accessToken: string | null; refreshToken: string | null } = {
+    accessToken: null,
+    refreshToken: null,
+  };
+  const tokenStorage = {
+    getAccessToken: vi.fn(async () => state.accessToken),
+    getRefreshToken: vi.fn(async () => state.refreshToken),
+    loadAuthTokens: vi.fn(async () => ({ accessToken: state.accessToken, refreshToken: state.refreshToken })),
+    setAuthTokens: vi.fn(async (tokens: { accessToken: string; refreshToken: string }) => {
+      state.accessToken = tokens.accessToken;
+      state.refreshToken = tokens.refreshToken;
+    }),
+    clearAuthTokens: vi.fn(async () => {
+      state.accessToken = null;
+      state.refreshToken = null;
+    }),
+  };
+  const router = { replace: vi.fn() };
+
+  return { state, tokenStorage, router };
+});
+
+vi.mock('@/auth/tokenStorage', () => mocks.tokenStorage);
+vi.mock('expo-router', () => ({ router: mocks.router }));
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+function emptyResponse(status = 204) {
+  return new Response(null, { status });
+}
+
+async function loadClient() {
+  vi.resetModules();
+  return import('./client');
+}
+
+describe('api client auth refresh', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.state.accessToken = 'old-access-token';
+    mocks.state.refreshToken = 'old-refresh-token';
+  });
+
+  it('refreshes tokens and retries an authenticated request once after 401', async () => {
+    const user = { id: 'user-id', email: 'user@example.com', username: 'user' };
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ detail: 'Unauthorized' }, 401))
+      .mockResolvedValueOnce(jsonResponse({ access_token: 'new-access-token', refresh_token: 'new-refresh-token' }))
+      .mockResolvedValueOnce(jsonResponse(user));
+    vi.stubGlobal('fetch', fetchMock);
+    const client = await loadClient();
+
+    await expect(client.getMe()).resolves.toEqual(user);
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'http://localhost:8000/users/me',
+      expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer old-access-token' }) }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'http://localhost:8000/auth/refresh',
+      expect.objectContaining({ body: JSON.stringify({ refresh_token: 'old-refresh-token' }) }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      'http://localhost:8000/users/me',
+      expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer new-access-token' }) }),
+    );
+    expect(mocks.tokenStorage.setAuthTokens).toHaveBeenCalledWith({ accessToken: 'new-access-token', refreshToken: 'new-refresh-token' });
+    expect(mocks.router.replace).not.toHaveBeenCalled();
+  });
+
+  it('clears tokens and redirects when refresh fails', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ detail: 'Unauthorized' }, 401))
+      .mockResolvedValueOnce(jsonResponse({ detail: 'Invalid refresh token.' }, 401));
+    vi.stubGlobal('fetch', fetchMock);
+    const client = await loadClient();
+
+    await expect(client.getMe()).rejects.toBeInstanceOf(client.AuthExpiredError);
+
+    expect(mocks.tokenStorage.clearAuthTokens).toHaveBeenCalledOnce();
+    expect(mocks.state.accessToken).toBeNull();
+    expect(mocks.state.refreshToken).toBeNull();
+    expect(mocks.router.replace).toHaveBeenCalledWith({ pathname: '/login', params: { notice: 'session-expired' } });
+  });
+
+  it('revokes refresh token remotely and clears local tokens on logout', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(emptyResponse());
+    vi.stubGlobal('fetch', fetchMock);
+    const client = await loadClient();
+
+    await client.logout();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:8000/auth/logout',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ refresh_token: 'old-refresh-token' }),
+      }),
+    );
+    expect(mocks.tokenStorage.clearAuthTokens).toHaveBeenCalledOnce();
+    expect(mocks.state.accessToken).toBeNull();
+    expect(mocks.state.refreshToken).toBeNull();
+  });
+
+  it('calls AI coach suggestion endpoints', async () => {
+    const suggestion = {
+      id: 'suggestion-1',
+      user_id: 'user-1',
+      routine_id: 'routine-1',
+      routine_exercise_id: 'routine-exercise-1',
+      exercise_id: 'exercise-1',
+      type: 'increase_weight',
+      status: 'pending',
+      input_summary: {},
+      recommendation: 'Sube peso',
+      explanation: 'Progresion estable',
+      risk_notes: null,
+      confidence: 'high',
+      apply_payload: {},
+      created_at: '2026-07-08T10:00:00Z',
+      reviewed_at: null,
+      applied_at: null,
+    };
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse([suggestion]))
+      .mockResolvedValueOnce(jsonResponse([suggestion]))
+      .mockResolvedValueOnce(jsonResponse([suggestion]))
+      .mockResolvedValueOnce(jsonResponse({ ...suggestion, status: 'accepted' }))
+      .mockResolvedValueOnce(jsonResponse({ ...suggestion, status: 'rejected' }));
+    vi.stubGlobal('fetch', fetchMock);
+    const client = await loadClient();
+
+    await expect(client.generateAiSuggestions()).resolves.toEqual([suggestion]);
+    await expect(client.getAiSuggestions()).resolves.toEqual([suggestion]);
+    await expect(client.analyzeRoutineGoal('routine-1')).resolves.toEqual([suggestion]);
+    await expect(client.acceptAiSuggestion('suggestion-1')).resolves.toEqual({ ...suggestion, status: 'accepted' });
+    await expect(client.rejectAiSuggestion('suggestion-1')).resolves.toEqual({ ...suggestion, status: 'rejected' });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, 'http://localhost:8000/ai/suggestions/generate', expect.objectContaining({ method: 'POST' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'http://localhost:8000/ai/suggestions', expect.objectContaining({ method: 'GET' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(3, 'http://localhost:8000/ai/routines/routine-1/analyze-goal', expect.objectContaining({ method: 'POST' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(4, 'http://localhost:8000/ai/suggestions/suggestion-1/accept', expect.objectContaining({ method: 'POST' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(5, 'http://localhost:8000/ai/suggestions/suggestion-1/reject', expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('calls guided AI coach question endpoint', async () => {
+    const answer = {
+      question_type: 'next_workout',
+      answer: 'Repite la carga',
+      key_points: ['RPE alto'],
+      related_metrics: { recent_session_count: 1 },
+      suggested_actions: ['Prioriza tecnica'],
+      provider: 'internal',
+      model: 'rules',
+      fallback_used: false,
+      input_summary: {},
+    };
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(answer));
+    vi.stubGlobal('fetch', fetchMock);
+    const client = await loadClient();
+
+    await expect(client.askCoachQuestion({ question_type: 'next_workout', routine_id: 'routine-1', detail: 'subo peso?' })).resolves.toEqual(answer);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:8000/ai/coach/questions',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ question_type: 'next_workout', routine_id: 'routine-1', detail: 'subo peso?' }),
+      }),
+    );
+  });
+
+  it('calls AI training plan endpoints', async () => {
+    const plan = {
+      id: 'plan-1',
+      user_id: 'user-1',
+      status: 'draft',
+      goal: 'hypertrophy',
+      level: 'beginner',
+      days_per_week: 3,
+      session_duration_minutes: 60,
+      available_equipment: [],
+      physical_limitations: null,
+      sensitive_data_acknowledged: false,
+      priorities: [],
+      plan_payload: { routines: [] },
+      explanation: 'Plan',
+      risk_notes: null,
+      confidence: 'medium',
+      input_summary: {},
+      provider: 'internal',
+      model: 'rules',
+      fallback_used: false,
+      created_at: '2026-07-08T10:00:00Z',
+      reviewed_at: null,
+    };
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(plan))
+      .mockResolvedValueOnce(jsonResponse([plan]))
+      .mockResolvedValueOnce(jsonResponse({ ...plan, status: 'accepted' }))
+      .mockResolvedValueOnce(jsonResponse({ ...plan, status: 'rejected' }))
+      .mockResolvedValueOnce(jsonResponse({ ...plan, id: 'plan-2', input_summary: { modified_from_plan_id: 'plan-1' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const client = await loadClient();
+
+    await expect(client.generateTrainingPlan({
+      goal: 'hypertrophy',
+      level: 'beginner',
+      days_per_week: 3,
+      session_duration_minutes: 60,
+      available_equipment: [],
+      physical_limitations: null,
+      sensitive_data_acknowledged: false,
+      priorities: [],
+    })).resolves.toEqual(plan);
+    await expect(client.getTrainingPlans()).resolves.toEqual([plan]);
+    await expect(client.acceptTrainingPlan('plan-1')).resolves.toEqual({ ...plan, status: 'accepted' });
+    await expect(client.rejectTrainingPlan('plan-1')).resolves.toEqual({ ...plan, status: 'rejected' });
+    await expect(client.modifyTrainingPlan('plan-1', { instruction: 'Hazlo a 4 dias', sensitive_data_acknowledged: false })).resolves.toEqual({
+      ...plan,
+      id: 'plan-2',
+      input_summary: { modified_from_plan_id: 'plan-1' },
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, 'http://localhost:8000/ai/training-plans/generate', expect.objectContaining({ method: 'POST' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'http://localhost:8000/ai/training-plans', expect.objectContaining({ method: 'GET' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(3, 'http://localhost:8000/ai/training-plans/plan-1/accept', expect.objectContaining({ method: 'POST' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(4, 'http://localhost:8000/ai/training-plans/plan-1/reject', expect.objectContaining({ method: 'POST' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      5,
+      'http://localhost:8000/ai/training-plans/plan-1/modify',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ instruction: 'Hazlo a 4 dias', sensitive_data_acknowledged: false }) }),
+    );
+  });
+
+  it('calls AI session summary endpoints', async () => {
+    const summary = {
+      id: 'summary-1',
+      user_id: 'user-1',
+      session_id: 'session-1',
+      summary: 'Resumen',
+      improvements: ['Mejora'],
+      drops: ['Caida'],
+      warnings: ['Warning'],
+      next_recommendation: 'Siguiente',
+      input_summary: {},
+      provider: 'internal',
+      model: 'rules',
+      fallback_used: false,
+      created_at: '2026-07-08T10:00:00Z',
+    };
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(summary))
+      .mockResolvedValueOnce(jsonResponse(summary));
+    vi.stubGlobal('fetch', fetchMock);
+    const client = await loadClient();
+
+    await expect(client.generateSessionSummary('session-1')).resolves.toEqual(summary);
+    await expect(client.getSessionSummary('session-1')).resolves.toEqual(summary);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, 'http://localhost:8000/ai/session-summaries/session-1/generate', expect.objectContaining({ method: 'POST' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'http://localhost:8000/ai/session-summaries/session-1', expect.objectContaining({ method: 'GET' }));
+  });
+});

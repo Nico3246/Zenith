@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: zenith-api
+    env: docker
+    rootDir: backend
+    plan: free
+    healthCheckPath: /ready
+    envVars:
+      - key: APP_APP_NAME
+        value: zenith-api
+      - key: APP_ENVIRONMENT
+        value: staging
+      - key: APP_DATABASE_URL
+        sync: false
+      - key: APP_SECRET_KEY
+        sync: false
+      - key: APP_CORS_ORIGINS
+        sync: false
+      - key: APP_AI_PROVIDER
+        value: internal
+      - key: APP_AI_EXTERNAL_DATA_ENABLED
+        value: "false"

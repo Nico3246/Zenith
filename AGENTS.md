@@ -31,6 +31,7 @@ Aplicacion para gestionar rutinas de gimnasio, registrar entrenamientos y asisti
 - Frontend persiste access y refresh token con `expo-secure-store`; fallback web actual usa `localStorage`.
 - Pendiente backend: lint, format, typecheck y build todavia no estan configurados.
 - Deploy fase 20: coste 0 con Render Free para backend Docker, Neon Free para PostgreSQL, Vercel Free para web/PWA, GitHub Actions Free para CI e IA `internal` en staging/produccion.
+- Producto fase 21: beta gratuita Zenith con branding, privacidad/terminos estaticos, aviso medico visible y aceptacion antes de registro; eliminacion/exportacion automatica queda pendiente.
 
 ## Estructura del proyecto
 - `backend/` — API FastAPI, SQLAlchemy/Alembic, PostgreSQL local, estructura por capas y tests.
@@ -90,5 +91,6 @@ Aplicacion para gestionar rutinas de gimnasio, registrar entrenamientos y asisti
 - `docs/data-model.md`: entidades y relaciones del MVP.
 - `docs/mvp.md`: alcance funcional del primer MVP.
 - `docs/deploy.md`: deploy gratuito, variables, migraciones, seeds, rollback y limitaciones.
+- `docs/product-beta.md`: estado beta, limitaciones y checklist antes de producto publico.
 - Documentar nuevas decisiones importantes en `docs/`, especialmente privacidad de IA y reglas de progresion.
 - Este `AGENTS.md` es la referencia operativa para futuras sesiones de OpenCode.

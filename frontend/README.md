@@ -57,6 +57,7 @@ Ejemplo con PC en `192.168.1.44`:
 - Expo Router configurado en `src/app/`.
 - Pantallas actuales: inicio, login, registro, dashboard, rango, ejercicios, rutinas, crear/editar rutina, sesiones, crear/editar/detalle de sesion, estadisticas, entrenador IA y entrenador personal.
 - Nombre publico configurado: Zenith.
+- Home, registro, privacidad y terminos preparados para beta Zenith.
 - Token persistido con `expo-secure-store` en nativo y fallback web con `localStorage`.
 - Tests frontend configurados con Vitest para helpers de formularios, progresion, formato stats/rank y mensajes auth; tests de pantallas todavia no configurados.
 
@@ -67,6 +68,14 @@ Ejemplo con PC en `192.168.1.44`:
 - `logout()` revoca el refresh token en backend y borra los tokens locales.
 - Si una request autenticada devuelve `401`, el cliente intenta `/auth/refresh`, guarda el nuevo par de tokens y reintenta una vez.
 - Si el refresh falla, el cliente borra tokens locales y redirige a login con aviso de sesion caducada.
+
+## Producto Beta
+
+- La home muestra aviso medico y enlaces a privacidad/terminos.
+- El registro exige aceptar privacidad, terminos y aviso medico.
+- `src/app/privacy.tsx` describe datos guardados, IA y limitaciones beta.
+- `src/app/terms.tsx` describe uso responsable, IA revisable y limites del free tier.
+- La app no sustituye consejo medico ni profesional.
 
 ## Entrenador IA
 

@@ -21,15 +21,24 @@ export default function IndexScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.eyebrow}>Gym AI</Text>
-      <Text style={styles.title}>Rutinas, registros y progreso con criterio.</Text>
+      <Text style={styles.eyebrow}>Zenith</Text>
+      <Text style={styles.title}>Entrena, registra y progresa con decisiones revisables.</Text>
       <Text style={styles.subtitle}>
-        Scaffold inicial conectado al backend: autenticacion, rango actual y ejercicios globales.
+        Crea rutinas, registra sesiones y usa IA interna para sugerencias que solo se aplican si las aceptas.
       </Text>
+      <View style={styles.disclaimerBox}>
+        <Text style={styles.disclaimerTitle}>Beta gratuita</Text>
+        <Text style={styles.disclaimerText}>Zenith no sustituye consejo medico ni profesional. Si tienes dolor, lesion o dudas de salud, consulta a un profesional.</Text>
+      </View>
       {checking && <Text style={styles.checking}>Comprobando sesion guardada...</Text>}
       <View style={styles.actions}>
         <Link href="/login" style={styles.primaryLink}>Iniciar sesion</Link>
         <Link href="/register" style={styles.secondaryLink}>Crear cuenta</Link>
+      </View>
+      <View style={styles.legalLinks}>
+        <Link href={'/privacy' as never} style={styles.legalLink}>Privacidad</Link>
+        <Text style={styles.legalSeparator}>·</Text>
+        <Link href={'/terms' as never} style={styles.legalLink}>Terminos</Link>
       </View>
     </SafeAreaView>
   );
@@ -64,6 +73,22 @@ const styles = StyleSheet.create({
   checking: {
     color: '#94a3b8',
   },
+  disclaimerBox: {
+    backgroundColor: '#111827',
+    borderColor: '#334155',
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 6,
+    padding: 14,
+  },
+  disclaimerTitle: {
+    color: '#fde68a',
+    fontWeight: '900',
+  },
+  disclaimerText: {
+    color: '#cbd5e1',
+    lineHeight: 21,
+  },
   actions: {
     gap: 12,
     marginTop: 16,
@@ -87,5 +112,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     padding: 16,
     textAlign: 'center',
+  },
+  legalLinks: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+  },
+  legalLink: {
+    color: '#93c5fd',
+    fontWeight: '800',
+  },
+  legalSeparator: {
+    color: '#64748b',
   },
 });

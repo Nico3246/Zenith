@@ -108,6 +108,10 @@ export default function CoachScreen() {
       <Text style={styles.kicker}>Entrenador IA</Text>
       <Text style={styles.title}>Progresion explicable</Text>
       <Text style={styles.subtitle}>IA interna local: no envia datos fuera y no usa notas. Al aceptar, la rutina se actualiza.</Text>
+      <View style={styles.warningBox}>
+        <Text style={styles.warningTitle}>Aviso medico</Text>
+        <Text style={styles.warningText}>No aceptes cambios si hay dolor, lesion, mareo o tecnica peor. Zenith no sustituye consejo medico ni profesional.</Text>
+      </View>
       <PrimaryButton disabled={generating || loading} onPress={submitGenerate} title={generating ? 'Analizando...' : 'Generar sugerencias'} />
       <SegmentedField
         label="Filtro"
@@ -182,6 +186,9 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   metaPill: { backgroundColor: '#1e1b4b', borderRadius: 999, color: '#c4b5fd', fontSize: 12, fontWeight: '900', overflow: 'hidden', paddingHorizontal: 10, paddingVertical: 5 },
   detailBox: { backgroundColor: '#0f172a', borderRadius: 12, gap: 5, padding: 10 },
+  warningBox: { backgroundColor: '#1f1111', borderColor: '#7f1d1d', borderRadius: 14, borderWidth: 1, gap: 6, padding: 12 },
+  warningTitle: { color: '#fecaca', fontWeight: '900' },
+  warningText: { color: '#fca5a5', lineHeight: 20 },
   riskBox: { backgroundColor: '#1f1111', borderColor: '#7f1d1d', borderRadius: 12, borderWidth: 1, gap: 5, padding: 10 },
   detailTitle: { color: '#bfdbfe', fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
   detailText: { color: '#dbeafe', lineHeight: 20 },

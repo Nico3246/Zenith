@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
@@ -42,6 +42,9 @@ export default function LoginScreen() {
       <Field label="Password" onChangeText={setPassword} secureTextEntry value={password} />
       {error && <Text style={styles.error}>{error}</Text>}
       <PrimaryButton disabled={loading} onPress={submit} title={loading ? 'Entrando...' : 'Iniciar sesion'} />
+      <Text style={styles.legalText}>Al usar Zenith aceptas el aviso medico de beta, privacidad y terminos.</Text>
+      <Link href={'/privacy' as never} style={styles.link}>Privacidad</Link>
+      <Link href={'/terms' as never} style={styles.link}>Terminos</Link>
     </Screen>
   );
 }
@@ -60,5 +63,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     color: '#bae6fd',
     padding: 12,
+  },
+  legalText: {
+    color: '#94a3b8',
+    lineHeight: 20,
+  },
+  link: {
+    color: '#93c5fd',
+    fontWeight: '900',
   },
 });

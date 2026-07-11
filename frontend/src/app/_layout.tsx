@@ -3,7 +3,7 @@ import { Stack } from 'expo-router';
 export default function RootLayout() {
   return (
     <Stack screenOptions={{ headerStyle: { backgroundColor: '#0f172a' }, headerTintColor: '#f8fafc' }}>
-      <Stack.Screen name="index" options={{ title: 'Gym AI' }} />
+      <Stack.Screen name="index" options={{ title: 'Zenith' }} />
       <Stack.Screen name="login" options={{ title: 'Login' }} />
       <Stack.Screen name="register" options={{ title: 'Registro' }} />
       <Stack.Screen name="dashboard" options={{ title: 'Dashboard' }} />
@@ -20,6 +20,8 @@ export default function RootLayout() {
       <Stack.Screen name="stats" options={{ title: 'Estadisticas' }} />
       <Stack.Screen name="coach" options={{ title: 'Entrenador IA' }} />
       <Stack.Screen name="trainer" options={{ title: 'Entrenador personal' }} />
+      <Stack.Screen name="privacy" options={{ title: 'Privacidad' }} />
+      <Stack.Screen name="terms" options={{ title: 'Terminos' }} />
     </Stack>
   );
 }

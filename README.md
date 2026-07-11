@@ -1,6 +1,6 @@
-# AplicacionDesarrolladaAgentesIAGimnasio
+# Zenith
 
-Aplicacion para gestionar rutinas de gimnasio, registrar entrenamientos y medir progresion con historial, estadisticas y rangos. La IA queda prevista para sugerencias explicables y revisables, sin modificar planes automaticamente.
+Aplicacion para gestionar rutinas de gimnasio, registrar entrenamientos y medir progresion con historial, estadisticas, rangos e IA revisable.
 
 ## Estado Del MVP
 
@@ -18,6 +18,7 @@ MVP funcional con backend FastAPI y frontend Expo Router:
 - Entrenador personal IA para crear planes adaptativos, enriquecer textos con Ollama local opcional y convertirlos en rutinas reales al aceptar.
 - Resumenes IA post-sesion con mejoras, caidas, warnings y proxima recomendacion sin modificar datos.
 - Preguntas guiadas al entrenador IA sin persistencia ni cambios automaticos.
+- Pantallas beta de privacidad y terminos, aviso medico visible y aceptacion antes de registro.
 - Soft delete de rutinas y sesiones.
 - UX minima con loading, estados vacios, avisos y errores legibles.
 
@@ -69,6 +70,16 @@ Fase 20 prepara deploy con coste 0:
 - IA en staging/produccion: `APP_AI_PROVIDER=internal`.
 
 Ver `docs/deploy.md` para variables, migraciones, seeds, rollback y limitaciones del free tier.
+
+## Producto Beta
+
+Fase 21 prepara Zenith para beta gratuita:
+
+- branding final Zenith.
+- onboarding con propuesta de valor y aviso medico.
+- privacidad y terminos estaticos en frontend.
+- aceptacion explicita de avisos antes de crear cuenta.
+- checklist de producto en `docs/product-beta.md`.
 
 ## Desarrollo Web Local
 
@@ -125,6 +136,7 @@ Antes de escanear el QR, abrir desde el movil `http://192.168.1.44:8000/health`.
 - IA actual usa reglas internas y puede enriquecer textos con Ollama local opcional; no usa notas y solo modifica rutinas cuando el usuario acepta una sugerencia.
 - Las preguntas al entrenador son guiadas y stateless; no se guardan ni crean cambios por si solas.
 - Las limitaciones fisicas opcionales se tratan como dato sensible: requieren confirmacion y no sustituyen consejo medico/profesional.
+- La beta no incluye eliminacion/exportacion automatica de cuenta; queda pendiente antes de producto publico.
 
 ## Documentacion
 
@@ -132,4 +144,5 @@ Antes de escanear el QR, abrir desde el movil `http://192.168.1.44:8000/health`.
 - `docs/data-model.md` — modelo de datos actual.
 - `docs/mvp.md` — alcance del MVP.
 - `docs/ai-privacy.md` — decision de privacidad y trazabilidad IA.
+- `docs/product-beta.md` — estado beta, limitaciones y checklist antes de producto publico.
 - `AGENTS.md` — instrucciones operativas para agentes.

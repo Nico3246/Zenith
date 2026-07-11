@@ -53,7 +53,7 @@ export default function RegisterScreen() {
         <Text style={styles.noticeText}>Zenith no sustituye consejo medico ni profesional. Las limitaciones fisicas son datos sensibles y solo deben indicarse si entiendes el aviso.</Text>
         <View style={styles.legalRow}>
           <Link href={'/privacy' as never} style={styles.link}>Privacidad</Link>
-          <Text style={styles.separator}>·</Text>
+          <Text style={styles.separator}>|</Text>
           <Link href={'/terms' as never} style={styles.link}>Terminos</Link>
         </View>
         <Pressable onPress={() => setAcceptedTerms((current) => !current)} style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>

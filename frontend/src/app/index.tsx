@@ -37,7 +37,7 @@ export default function IndexScreen() {
       </View>
       <View style={styles.legalLinks}>
         <Link href={'/privacy' as never} style={styles.legalLink}>Privacidad</Link>
-        <Text style={styles.legalSeparator}>·</Text>
+        <Text style={styles.legalSeparator}>|</Text>
         <Link href={'/terms' as never} style={styles.legalLink}>Terminos</Link>
       </View>
     </SafeAreaView>

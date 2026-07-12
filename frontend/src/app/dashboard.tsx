@@ -1,10 +1,10 @@
 import { Link, useRouter } from 'expo-router';
-import { Activity, Bell, ChevronRight, Flame, Play, Sparkles, TrendingUp, Trophy, Zap } from 'lucide-react-native';
+import { Activity, ChevronRight, Flame, Play, Sparkles, TrendingUp, Trophy, Zap } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AuthExpiredError, ExerciseStats, getExerciseStats, getMe, getRank, getRoutines, getWorkoutSessions, logout, RankProgress, Routine, User, WorkoutSession } from '@/api/client';
-import { ZenithBottomNav, ZenithButton, ZenithCard, ZenithIconButton, ZenithNotice, ZenithPill, ZenithStatCard, zenithText } from '@/components/ZenithUI';
+import { ZenithBottomNav, ZenithButton, ZenithCard, ZenithNotice, ZenithPill, ZenithStatCard, zenithText } from '@/components/ZenithUI';
 import { ZenithScreen } from '@/components/ZenithScreen';
 import { routineAccents, zenith } from '@/constants/zenithTheme';
 import { formatRankScore } from '@/utils/rankDisplay';
@@ -74,7 +74,6 @@ export default function DashboardScreen() {
           <Text style={styles.title}>Hola, <Text style={styles.titleAccent}>{username}</Text></Text>
         </View>
         <View style={styles.headerActions}>
-          <ZenithIconButton><Bell color={zenith.colors.muted} size={16} /></ZenithIconButton>
           <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
         </View>
       </View>

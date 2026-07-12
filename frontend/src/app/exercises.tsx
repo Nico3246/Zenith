@@ -1,3 +1,4 @@
+import { Link, useLocalSearchParams } from 'expo-router';
 import { ChevronRight, Dumbbell, Plus, Search } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -10,6 +11,7 @@ import { routineAccents, zenith } from '@/constants/zenithTheme';
 const ALL = 'Todos';
 
 export default function ExercisesScreen() {
+  const { notice } = useLocalSearchParams();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [query, setQuery] = useState('');
   const [muscle, setMuscle] = useState(ALL);
@@ -24,6 +26,7 @@ export default function ExercisesScreen() {
   }, []);
 
   const muscleOptions = [ALL, ...unique(exercises.flatMap((exercise) => exercise.muscle_groups.map((item) => item.name))).slice(0, 10)];
+  const noticeText = notice === 'created' ? 'Ejercicio creado.' : null;
   const normalizedQuery = normalize(query);
   const filtered = exercises.filter((exercise) => {
     const matchesMuscle = muscle === ALL || exercise.muscle_groups.some((item) => item.name === muscle);
@@ -42,8 +45,9 @@ export default function ExercisesScreen() {
       <ZenithHeader
         subtitle={`${exercises.length} en catalogo`}
         title="Ejercicios"
-        right={<ZenithIconButton><Plus color={zenith.colors.primary} size={17} /></ZenithIconButton>}
+        right={<ZenithIconButton href={'/exercise-new' as never}><Plus color={zenith.colors.primary} size={17} /></ZenithIconButton>}
       />
+      {noticeText && <ZenithNotice tone="success">{noticeText}</ZenithNotice>}
 
       <View style={styles.searchBox}>
         <Search color={zenith.colors.muted} size={15} />
@@ -77,20 +81,24 @@ export default function ExercisesScreen() {
         {filtered.map((exercise, index) => {
           const accent = routineAccents[index % routineAccents.length];
           return (
-            <ZenithCard key={exercise.id} style={styles.card}>
-              <View style={[styles.iconBox, { backgroundColor: `${accent}18` }]}>
-                <Dumbbell color={accent} size={18} />
-              </View>
-              <View style={styles.cardText}>
-                <Text style={styles.name}>{exercise.name}</Text>
-                <Text style={styles.meta} numberOfLines={1}>{primaryMuscle(exercise)} · {equipmentLabel(exercise)}</Text>
-              </View>
-              <View style={styles.badges}>
-                <ZenithPill color={accent}>{difficultyLabel(exercise.difficulty)}</ZenithPill>
-                <Text style={styles.origin}>{exercise.is_global ? 'Global' : 'Propio'}</Text>
-              </View>
-              <ChevronRight color={zenith.colors.muted} size={15} />
-            </ZenithCard>
+            <Link key={exercise.id} href={{ pathname: '/exercise-detail', params: { exerciseId: exercise.id } } as never} asChild>
+              <Pressable>
+                <ZenithCard style={styles.card}>
+                  <View style={[styles.iconBox, { backgroundColor: `${accent}18` }]}>
+                    <Dumbbell color={accent} size={18} />
+                  </View>
+                  <View style={styles.cardText}>
+                    <Text style={styles.name}>{exercise.name}</Text>
+                    <Text style={styles.meta} numberOfLines={1}>{primaryMuscle(exercise)} · {equipmentLabel(exercise)}</Text>
+                  </View>
+                  <View style={styles.badges}>
+                    <ZenithPill color={accent}>{difficultyLabel(exercise.difficulty)}</ZenithPill>
+                    <Text style={styles.origin}>{exercise.is_global ? 'Global' : 'Propio'}</Text>
+                  </View>
+                  <ChevronRight color={zenith.colors.muted} size={15} />
+                </ZenithCard>
+              </Pressable>
+            </Link>
           );
         })}
       </View>

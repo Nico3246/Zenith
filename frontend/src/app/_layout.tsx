@@ -42,6 +42,8 @@ export default function RootLayout() {
       <Stack.Screen name="dashboard" options={{ headerShown: false, title: 'Inicio' }} />
       <Stack.Screen name="rank" options={{ headerShown: false, title: 'Rango' }} />
       <Stack.Screen name="exercises" options={{ headerShown: false, title: 'Ejercicios' }} />
+      <Stack.Screen name="exercise-new" options={{ title: 'Nuevo ejercicio' }} />
+      <Stack.Screen name="exercise-detail" options={{ title: 'Detalle ejercicio' }} />
       <Stack.Screen name="routines" options={{ headerShown: false, title: 'Rutinas' }} />
       <Stack.Screen name="routine-new" options={{ title: 'Nueva rutina' }} />
       <Stack.Screen name="routine-edit" options={{ title: 'Editar rutina' }} />

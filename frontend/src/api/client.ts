@@ -13,6 +13,9 @@ type RequestOptions = {
 type ApiErrorDetail = string | { msg?: string; loc?: (string | number)[] }[] | { detail?: unknown };
 type ApiValidationError = { msg?: string; loc?: (string | number)[] };
 
+const API_TIMEOUT_MS = 20_000;
+const API_TIMEOUT_MESSAGE = 'La API tardo demasiado en responder. Intentalo de nuevo.';
+
 type TokenResponse = {
   access_token: string;
   refresh_token: string;
@@ -63,6 +66,15 @@ export type Exercise = {
   equipment: NamedReference[];
   created_at: string;
   updated_at: string;
+};
+
+export type ExercisePayload = {
+  name: string;
+  description?: string | null;
+  difficulty?: 'beginner' | 'intermediate' | 'advanced' | null;
+  technique_notes?: string | null;
+  muscle_group_ids: string[];
+  equipment_ids: string[];
 };
 
 export type Routine = {
@@ -288,11 +300,24 @@ async function request<T>(path: string, options: RequestOptions = {}, retryOnUna
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method: options.method ?? 'GET',
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error(API_TIMEOUT_MESSAGE);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     if (response.status === 401 && options.auth) {
@@ -310,6 +335,10 @@ async function request<T>(path: string, options: RequestOptions = {}, retryOnUna
   }
 
   return response.json() as Promise<T>;
+}
+
+function isAbortError(error: unknown) {
+  return typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
 }
 
 async function refreshSession() {
@@ -443,6 +472,22 @@ export function recalculateRank() {
 
 export function getExercises() {
   return request<Exercise[]>('/exercises', { auth: true });
+}
+
+export function getExercise(exerciseId: string) {
+  return request<Exercise>(`/exercises/${exerciseId}`, { auth: true });
+}
+
+export function createExercise(payload: ExercisePayload) {
+  return request<Exercise>('/exercises', { method: 'POST', auth: true, body: payload });
+}
+
+export function getMuscleGroups() {
+  return request<NamedReference[]>('/muscle-groups');
+}
+
+export function getEquipment() {
+  return request<NamedReference[]>('/equipment');
 }
 
 export function getRoutines() {

@@ -3,7 +3,7 @@ import { Bot, Play, Plus } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { analyzeRoutineGoal, Exercise, getExercises, getRoutines, Routine } from '@/api/client';
+import { analyzeRoutineGoal, AuthExpiredError, Exercise, getExercises, getRoutines, Routine } from '@/api/client';
 import { ZenithBottomNav, ZenithCard, ZenithHeader, ZenithIconButton, ZenithNotice, ZenithPill } from '@/components/ZenithUI';
 import { ZenithScreen } from '@/components/ZenithScreen';
 import { routineAccents, zenith } from '@/constants/zenithTheme';
@@ -13,26 +13,60 @@ export default function RoutinesScreen() {
   const { notice } = useLocalSearchParams();
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [routinesError, setRoutinesError] = useState<string | null>(null);
+  const [exercisesError, setExercisesError] = useState<string | null>(null);
+  const [loadingRoutines, setLoadingRoutines] = useState(true);
+  const [loadingExercises, setLoadingExercises] = useState(true);
   const [workingRoutine, setWorkingRoutine] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([getRoutines(), getExercises()])
-      .then(([routineItems, exerciseItems]) => {
-        setRoutines(routineItems);
-        setExercises(exerciseItems);
+    let cancelled = false;
+
+    getRoutines()
+      .then((routineItems) => {
+        if (!cancelled) {
+          setRoutines(routineItems);
+        }
       })
-      .catch((caught) => setError(caught instanceof Error ? caught.message : 'Error'))
-      .finally(() => setLoading(false));
+      .catch((caught) => {
+        if (!cancelled && !(caught instanceof AuthExpiredError)) {
+          setRoutinesError(caught instanceof Error ? caught.message : 'No se pudieron cargar las rutinas.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingRoutines(false);
+        }
+      });
+
+    getExercises()
+      .then((exerciseItems) => {
+        if (!cancelled) {
+          setExercises(exerciseItems);
+        }
+      })
+      .catch((caught) => {
+        if (!cancelled && !(caught instanceof AuthExpiredError)) {
+          setExercisesError(caught instanceof Error ? caught.message : 'No se pudieron cargar los nombres de ejercicios.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingExercises(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const noticeText = notice === 'created' ? 'Rutina creada.' : notice === 'updated' ? 'Rutina guardada.' : notice === 'deleted' ? 'Rutina eliminada.' : null;
 
   async function submitAnalyzeGoal(routineId: string) {
     setWorkingRoutine(routineId);
-    setError(null);
+    setRoutinesError(null);
     setActionNotice(null);
     try {
       const suggestions = await analyzeRoutineGoal(routineId);
@@ -42,9 +76,25 @@ export default function RoutinesScreen() {
           : 'La rutina ya esta alineada con su objetivo o no tiene objetivo reconocido.',
       );
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'No se pudo analizar el objetivo de la rutina.');
+      if (!(caught instanceof AuthExpiredError)) {
+        setRoutinesError(caught instanceof Error ? caught.message : 'No se pudo analizar el objetivo de la rutina.');
+      }
     } finally {
       setWorkingRoutine(null);
+    }
+  }
+
+  async function retryRoutines() {
+    setLoadingRoutines(true);
+    setRoutinesError(null);
+    try {
+      setRoutines(await getRoutines());
+    } catch (caught) {
+      if (!(caught instanceof AuthExpiredError)) {
+        setRoutinesError(caught instanceof Error ? caught.message : 'No se pudieron cargar las rutinas.');
+      }
+    } finally {
+      setLoadingRoutines(false);
     }
   }
 
@@ -57,9 +107,18 @@ export default function RoutinesScreen() {
       />
       {noticeText && <ZenithNotice tone="success">{noticeText}</ZenithNotice>}
       {actionNotice && <ZenithNotice tone="success">{actionNotice}</ZenithNotice>}
-      {loading && <ZenithNotice>Cargando rutinas...</ZenithNotice>}
-      {error && <ZenithNotice tone="danger">{error}</ZenithNotice>}
-      {!loading && !error && routines.length === 0 && <ZenithNotice>Aun no tienes rutinas.</ZenithNotice>}
+      {loadingRoutines && <ZenithNotice>Cargando rutinas...</ZenithNotice>}
+      {!loadingRoutines && loadingExercises && routines.length > 0 && <ZenithNotice>Cargando nombres de ejercicios...</ZenithNotice>}
+      {exercisesError && routines.length > 0 && <ZenithNotice tone="warning">{exercisesError}</ZenithNotice>}
+      {routinesError && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{routinesError}</Text>
+          <Pressable onPress={retryRoutines} style={styles.retryButton}>
+            <Text style={styles.retryText}>Reintentar</Text>
+          </Pressable>
+        </View>
+      )}
+      {!loadingRoutines && !routinesError && routines.length === 0 && <ZenithNotice>Aun no tienes rutinas.</ZenithNotice>}
 
       {routines.map((routine, index) => {
         const accent = routineAccents[index % routineAccents.length];
@@ -126,6 +185,10 @@ const styles = StyleSheet.create({
   aiButton: { alignItems: 'center', borderColor: zenith.colors.primaryBorder, borderRadius: 13, borderWidth: 1, flexDirection: 'row', gap: 6, paddingHorizontal: 13, paddingVertical: 10 },
   aiText: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold, fontSize: 12 },
   edit: { borderColor: zenith.colors.border, borderRadius: 13, borderWidth: 1, color: zenith.colors.muted, fontFamily: zenith.font.bodyBold, overflow: 'hidden', paddingHorizontal: 14, paddingVertical: 10 },
+  errorBox: { backgroundColor: zenith.colors.dangerSoft, borderColor: 'rgba(232,64,64,0.28)', borderRadius: 14, borderWidth: 1, gap: 10, padding: 12 },
+  errorText: { color: '#ffb4b4', fontFamily: zenith.font.bodyMedium, lineHeight: 20 },
+  retryButton: { alignItems: 'center', borderColor: 'rgba(232,64,64,0.35)', borderRadius: 12, borderWidth: 1, padding: 10 },
+  retryText: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold },
   disabled: { opacity: 0.5 },
   createButton: { alignItems: 'center', backgroundColor: zenith.colors.primary, borderRadius: 18, flexDirection: 'row', gap: 8, justifyContent: 'center', padding: 15 },
   createText: { color: zenith.colors.primaryForeground, fontFamily: zenith.font.bodyBold, fontWeight: '900' },

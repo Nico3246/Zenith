@@ -1,11 +1,22 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.domain.stats import ExerciseStatsDetail, ExerciseStatsPoint, ExerciseStatsSummary, StatsPeriod
+from app.domain.stats import (
+    ExerciseStatsDetail,
+    ExerciseStatsPoint,
+    ExerciseStatsSummary,
+    StatsMuscleGroupSummary,
+    StatsOverview,
+    StatsOverviewKpis,
+    StatsOverviewPoint,
+    StatsPeriod,
+    StatsTopExerciseSummary,
+    StatsVolumeByUnit,
+)
 from app.infrastructure.db.models.user import User
 from app.infrastructure.db.repositories.exercises import ExerciseRepository
 from app.infrastructure.db.repositories.stats import StatsRepository, StatsRow
@@ -182,11 +193,140 @@ class StatsService:
         points.sort(key=lambda item: (item.period_start, item.weight_unit or ""))
         return ExerciseStatsDetail(exercise_id=exercise.id, exercise_name=exercise.name, period=period, points=points)
 
+    def get_overview(
+        self,
+        db: Session,
+        user: User,
+        period: StatsPeriod,
+        start_date: datetime | None,
+        end_date: datetime | None,
+        weight_unit: str | None,
+    ) -> StatsOverview:
+        rows = StatsRepository(db).list_workout_sets(
+            user_id=user.id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        rows = filter_rows_by_weight_unit(rows, weight_unit)
+
+        sessions = {session.id: session for _set, session, _exercise in rows}
+        training_seconds = sum(session_duration_seconds(session) for session in sessions.values())
+        volume_by_unit: dict[str | None, Decimal] = {}
+        period_groups: dict[tuple[datetime, str | None], StatsOverviewAccumulator] = {}
+        muscle_groups: dict[str, int] = {}
+        exercises: dict[tuple[UUID, str | None], StatsAccumulator] = {}
+
+        for row in rows:
+            workout_set, session, exercise = row
+            unit = row_weight_unit(row)
+            if workout_set.weight_value is not None:
+                volume_by_unit[unit] = volume_by_unit.get(unit, Decimal("0")) + Decimal(workout_set.weight_value) * workout_set.reps
+
+            period_start = period_start_for(session.started_at, period)
+            period_key = (period_start, unit)
+            period_groups.setdefault(period_key, StatsOverviewAccumulator(period_start=period_start, weight_unit=unit)).add(row)
+
+            if exercise.muscle_groups:
+                for muscle_group in exercise.muscle_groups:
+                    muscle_groups[muscle_group.name] = muscle_groups.get(muscle_group.name, 0) + 1
+            else:
+                muscle_groups["Sin musculo"] = muscle_groups.get("Sin musculo", 0) + 1
+
+            exercise_key = (workout_set.exercise_id, unit)
+            exercises.setdefault(
+                exercise_key,
+                StatsAccumulator(
+                    exercise_id=workout_set.exercise_id,
+                    exercise_name=exercise.name,
+                    weight_unit=unit,
+                ),
+            ).add(row)
+
+        top_exercises = [to_top_exercise(group) for group in exercises.values()]
+        top_exercises.sort(key=top_exercise_sort_key)
+
+        return StatsOverview(
+            period=period,
+            kpis=StatsOverviewKpis(
+                total_sets=len(rows),
+                session_count=len(sessions),
+                training_hours=quantize_or_none(Decimal(training_seconds) / Decimal("3600")) or Decimal("0.00"),
+                pr_count=sum(1 for group in exercises.values() if group.max_weight is not None),
+            ),
+            volume_by_unit=[
+                StatsVolumeByUnit(weight_unit=unit, total_volume=quantize_or_none(total))
+                for unit, total in sorted(volume_by_unit.items(), key=lambda item: item[0] or "")
+            ],
+            volume_points=sorted(
+                (group.to_point() for group in period_groups.values()),
+                key=lambda item: (item.period_start, item.weight_unit or ""),
+            ),
+            muscle_groups=[
+                StatsMuscleGroupSummary(name=name, total_sets=total_sets)
+                for name, total_sets in sorted(muscle_groups.items(), key=lambda item: item[1], reverse=True)
+            ],
+            top_exercises=top_exercises[:5],
+        )
+
 
 def filter_rows_by_weight_unit(rows: list[StatsRow], weight_unit: str | None) -> list[StatsRow]:
     if weight_unit is None:
         return rows
     return [row for row in rows if row_weight_unit(row) == weight_unit]
+
+
+@dataclass
+class StatsOverviewAccumulator:
+    period_start: datetime
+    weight_unit: str | None
+    total_sets: int = 0
+    total_volume: Decimal = Decimal("0")
+    weighted_sets: int = 0
+    session_ids: set[UUID] = field(default_factory=set)
+
+    def add(self, row: StatsRow) -> None:
+        workout_set, session, _exercise = row
+        self.total_sets += 1
+        self.session_ids.add(session.id)
+        if workout_set.weight_value is not None:
+            self.weighted_sets += 1
+            self.total_volume += Decimal(workout_set.weight_value) * workout_set.reps
+
+    def to_point(self) -> StatsOverviewPoint:
+        return StatsOverviewPoint(
+            period_start=self.period_start,
+            weight_unit=self.weight_unit,
+            total_volume=quantize_or_none(self.total_volume if self.weighted_sets else None),
+            total_sets=self.total_sets,
+            session_count=len(self.session_ids),
+        )
+
+
+def session_duration_seconds(session) -> int:
+    if session.finished_at is None:
+        return 0
+    started_at = ensure_utc(session.started_at)
+    finished_at = ensure_utc(session.finished_at)
+    if finished_at <= started_at:
+        return 0
+    return int((finished_at - started_at).total_seconds())
+
+
+def to_top_exercise(group: StatsAccumulator) -> StatsTopExerciseSummary:
+    return StatsTopExerciseSummary(
+        exercise_id=group.exercise_id,
+        exercise_name=group.exercise_name,
+        weight_unit=group.weight_unit,
+        total_volume=quantize_or_none(group.total_volume if group.weighted_sets else None),
+        max_weight=quantize_or_none(group.max_weight),
+        best_estimated_1rm=quantize_or_none(group.best_estimated_1rm),
+    )
+
+
+def top_exercise_sort_key(item: StatsTopExerciseSummary) -> tuple[str, Decimal]:
+    # Keep units grouped so kg and lb are not ranked against each other numerically.
+    metric = item.best_estimated_1rm or item.max_weight or item.total_volume or Decimal("0")
+    return (item.weight_unit or "", -metric)
 
 
 stats_service = StatsService()

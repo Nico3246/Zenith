@@ -286,6 +286,33 @@ export type ExerciseStatsDetail = {
   points: ExerciseStatsPoint[];
 };
 
+export type StatsOverview = {
+  period: StatsGroupingPeriod;
+  kpis: {
+    total_sets: number;
+    session_count: number;
+    training_hours: string;
+    pr_count: number;
+  };
+  volume_by_unit: { weight_unit: string | null; total_volume: string | null }[];
+  volume_points: {
+    period_start: string;
+    weight_unit: string | null;
+    total_volume: string | null;
+    total_sets: number;
+    session_count: number;
+  }[];
+  muscle_groups: { name: string; total_sets: number }[];
+  top_exercises: {
+    exercise_id: string;
+    exercise_name: string;
+    weight_unit: string | null;
+    total_volume: string | null;
+    max_weight: string | null;
+    best_estimated_1rm: string | null;
+  }[];
+};
+
 function appendStatsRange(params: URLSearchParams, periodFilter: StatsPeriodFilter) {
   const days = periodFilter === '7d' ? 7 : periodFilter === '30d' ? 30 : periodFilter === '90d' ? 90 : null;
   if (days !== null) {
@@ -606,6 +633,19 @@ export function getExerciseStats(periodFilter: StatsPeriodFilter = 'all', weight
   }
   const query = params.toString();
   return request<ExerciseStats[]>(`/stats/exercises${query ? `?${query}` : ''}`, { auth: true });
+}
+
+export function getStatsOverview(
+  periodFilter: StatsPeriodFilter = '30d',
+  options: { period?: StatsGroupingPeriod; weightUnit?: StatsWeightUnit } = {},
+) {
+  const params = new URLSearchParams();
+  params.set('period', options.period ?? 'week');
+  appendStatsRange(params, periodFilter);
+  if (options.weightUnit) {
+    params.set('weight_unit', options.weightUnit);
+  }
+  return request<StatsOverview>(`/stats/overview?${params.toString()}`, { auth: true });
 }
 
 export function getExerciseStatsDetail(

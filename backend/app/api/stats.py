@@ -7,11 +7,23 @@ from sqlalchemy.orm import Session
 
 from app.api.users import get_current_user
 from app.application.stats_service import StatsNotFoundError, stats_service
-from app.domain.stats import ExerciseStatsDetail, ExerciseStatsSummary, StatsPeriod, StatsWeightUnit
+from app.domain.stats import ExerciseStatsDetail, ExerciseStatsSummary, StatsOverview, StatsPeriod, StatsWeightUnit
 from app.infrastructure.db.models.user import User
 from app.infrastructure.db.session import get_db
 
 router = APIRouter(prefix="/stats", tags=["stats"])
+
+
+@router.get("/overview", response_model=StatsOverview)
+def get_stats_overview(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    period: Annotated[StatsPeriod, Query()] = "week",
+    start_date: Annotated[datetime | None, Query()] = None,
+    end_date: Annotated[datetime | None, Query()] = None,
+    weight_unit: Annotated[StatsWeightUnit | None, Query()] = None,
+):
+    return stats_service.get_overview(db, current_user, period, start_date, end_date, weight_unit)
 
 
 @router.get("/exercises", response_model=list[ExerciseStatsSummary])

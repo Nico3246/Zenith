@@ -278,4 +278,29 @@ describe('api client auth refresh', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(1, 'http://localhost:8000/ai/session-summaries/session-1/generate', expect.objectContaining({ method: 'POST' }));
     expect(fetchMock).toHaveBeenNthCalledWith(2, 'http://localhost:8000/ai/session-summaries/session-1', expect.objectContaining({ method: 'GET' }));
   });
+
+  it('calls stats overview endpoint with filters', async () => {
+    const overview = {
+      period: 'week',
+      kpis: { total_sets: 1, session_count: 1, training_hours: '1.00', pr_count: 1 },
+      volume_by_unit: [{ weight_unit: 'kg', total_volume: '500.00' }],
+      volume_points: [],
+      muscle_groups: [],
+      top_exercises: [],
+    };
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(overview));
+    vi.stubGlobal('fetch', fetchMock);
+    const client = await loadClient();
+
+    await expect(client.getStatsOverview('30d', { period: 'week', weightUnit: 'kg' })).resolves.toEqual(overview);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('http://localhost:8000/stats/overview?'),
+      expect.objectContaining({ method: 'GET' }),
+    );
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain('period=week');
+    expect(url).toContain('weight_unit=kg');
+    expect(url).toContain('start_date=');
+  });
 });

@@ -1,3 +1,4 @@
+import { Activity, Clock, Layers, Star, TrendingUp } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -7,11 +8,13 @@ import {
   ExerciseStatsPoint,
   getExerciseStats,
   getExerciseStatsDetail,
+  getStatsOverview,
+  StatsOverview,
   StatsGroupingPeriod,
   StatsPeriodFilter,
   StatsWeightUnit,
 } from '@/api/client';
-import { ZenithBottomNav, ZenithHeader, ZenithNotice } from '@/components/ZenithUI';
+import { ZenithBottomNav, ZenithCard, ZenithHeader, ZenithNotice, ZenithPill } from '@/components/ZenithUI';
 import { ZenithScreen } from '@/components/ZenithScreen';
 import { zenith } from '@/constants/zenithTheme';
 import {
@@ -51,6 +54,7 @@ export default function StatsScreen() {
   const [weightFilter, setWeightFilter] = useState<WeightFilter>('all');
   const [groupPeriod, setGroupPeriod] = useState<StatsGroupingPeriod>('week');
   const [stats, setStats] = useState<ExerciseStats[]>([]);
+  const [overview, setOverview] = useState<StatsOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
@@ -60,10 +64,15 @@ export default function StatsScreen() {
 
   useEffect(() => {
     let active = true;
-    getExerciseStats(period, weightFilter === 'all' ? undefined : weightFilter)
-      .then((items) => {
+    const weightUnit = weightFilter === 'all' ? undefined : weightFilter;
+    Promise.all([
+      getExerciseStats(period, weightUnit),
+      getStatsOverview(period, { period: groupPeriod, weightUnit }),
+    ])
+      .then(([items, nextOverview]) => {
         if (active) {
           setStats(items);
+          setOverview(nextOverview);
         }
       })
       .catch((caught) => {
@@ -79,7 +88,7 @@ export default function StatsScreen() {
     return () => {
       active = false;
     };
-  }, [period, weightFilter]);
+  }, [groupPeriod, period, weightFilter]);
 
   useEffect(() => {
     const item = expandedKey ? stats.find((entry) => statsKey(entry) === expandedKey) : null;
@@ -151,6 +160,7 @@ export default function StatsScreen() {
     setError(null);
     setExpandedKey(null);
     setDetail(null);
+    setOverview(null);
     setDetailLoading(false);
     setDetailError(null);
   }
@@ -181,6 +191,7 @@ export default function StatsScreen() {
 
       {loading && <ZenithNotice>Cargando estadisticas...</ZenithNotice>}
       {error && <ZenithNotice tone="danger">{error}</ZenithNotice>}
+      {!loading && !error && overview && <OverviewSection overview={overview} />}
       {!loading && !error && stats.length === 0 && (
         <ZenithNotice>No hay datos para este periodo. Registra sesiones con ejercicios para ver estadisticas.</ZenithNotice>
       )}
@@ -223,6 +234,80 @@ export default function StatsScreen() {
         );
       })}
     </ZenithScreen>
+  );
+}
+
+function OverviewSection({ overview }: { overview: StatsOverview }) {
+  return (
+    <View style={styles.overviewSection}>
+      <View style={styles.kpiGrid}>
+        <KpiCard icon={<TrendingUp color={zenith.colors.primary} size={14} />} label="Volumen" value={formatOverviewVolume(overview)} detail="total" />
+        <KpiCard icon={<Layers color={zenith.colors.cyan} size={14} />} label="Series" value={String(overview.kpis.total_sets)} detail="sets" />
+        <KpiCard icon={<Clock color={zenith.colors.violet} size={14} />} label="Entreno" value={formatStatsValue(overview.kpis.training_hours)} detail="horas" />
+        <KpiCard icon={<Star color={zenith.colors.amber} size={14} />} label="PRs" value={String(overview.kpis.pr_count)} detail="detectados" />
+      </View>
+
+      <ZenithCard style={styles.overviewCard}>
+        <View style={styles.overviewHeader}>
+          <Text style={styles.overviewTitle}>Volumen por periodo</Text>
+          <ZenithPill>{overview.period}</ZenithPill>
+        </View>
+        {overview.volume_points.length > 0 ? <MiniBarChart bars={overview.volume_points.map((point) => ({ label: chartLabel(point.period_start, point.weight_unit), value: Number(point.total_volume ?? 0) }))} /> : <Text style={styles.detailText}>No hay volumen con peso para este filtro.</Text>}
+      </ZenithCard>
+
+      <ZenithCard style={styles.overviewCard}>
+        <View style={styles.overviewHeader}>
+          <Text style={styles.overviewTitle}>Series por musculo</Text>
+          <Activity color={zenith.colors.primary} size={14} />
+        </View>
+        {overview.muscle_groups.length > 0 ? <MuscleBars items={overview.muscle_groups.slice(0, 6)} /> : <Text style={styles.detailText}>No hay grupos musculares registrados.</Text>}
+      </ZenithCard>
+
+      <ZenithCard style={styles.overviewCard}>
+        <Text style={styles.overviewTitle}>Levantamientos principales</Text>
+        {overview.top_exercises.length > 0 ? overview.top_exercises.map((item) => <TopExercise key={`${item.exercise_id}-${item.weight_unit ?? 'bodyweight'}`} item={item} />) : <Text style={styles.detailText}>No hay levantamientos con carga todavia.</Text>}
+      </ZenithCard>
+    </View>
+  );
+}
+
+function KpiCard({ detail, icon, label, value }: { detail: string; icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <ZenithCard style={styles.kpiCard}>
+      <View style={styles.kpiHeader}>{icon}<Text style={styles.kpiLabel}>{label}</Text></View>
+      <Text style={styles.kpiValue}>{value}</Text>
+      <Text style={styles.kpiDetail}>{detail}</Text>
+    </ZenithCard>
+  );
+}
+
+function MuscleBars({ items }: { items: { name: string; total_sets: number }[] }) {
+  const max = Math.max(...items.map((item) => item.total_sets), 1);
+  return (
+    <View style={styles.muscleList}>
+      {items.map((item) => (
+        <View key={item.name} style={styles.muscleRow}>
+          <View style={styles.muscleHeader}>
+            <Text style={styles.muscleName}>{item.name}</Text>
+            <Text style={styles.muscleSets}>{item.total_sets} sets</Text>
+          </View>
+          <View style={styles.muscleTrack}><View style={[styles.muscleFill, { width: `${Math.round((item.total_sets / max) * 100)}%` }]} /></View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function TopExercise({ item }: { item: StatsOverview['top_exercises'][number] }) {
+  const metric = item.best_estimated_1rm ?? item.max_weight ?? item.total_volume;
+  return (
+    <View style={styles.topExerciseRow}>
+      <View style={styles.topExerciseText}>
+        <Text style={styles.topExerciseName}>{item.exercise_name}</Text>
+        <Text style={styles.topExerciseMeta}>{item.weight_unit ? item.weight_unit : 'sin peso'} · volumen {formatStatsValue(item.total_volume, item.weight_unit)}</Text>
+      </View>
+      <Text style={styles.topExerciseValue}>{formatStatsValue(metric, item.weight_unit)}</Text>
+    </View>
   );
 }
 
@@ -301,8 +386,42 @@ function MiniBarChart({ bars }: { bars: { label: string; value: number }[] }) {
   );
 }
 
+function formatOverviewVolume(overview: StatsOverview) {
+  if (overview.volume_by_unit.length === 0) {
+    return '0';
+  }
+  return overview.volume_by_unit.map((item) => formatStatsValue(item.total_volume, item.weight_unit)).join(' / ');
+}
+
+function chartLabel(periodStart: string, weightUnit: string | null) {
+  const unit = weightUnit ? ` ${weightUnit}` : '';
+  return `${formatStatsDate(periodStart)}${unit}`;
+}
+
 const styles = StyleSheet.create({
   subtitle: { color: zenith.colors.muted, fontFamily: zenith.font.body, fontSize: 14, lineHeight: 21 },
+  overviewSection: { gap: 12 },
+  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  kpiCard: { flexGrow: 1, gap: 5, minWidth: '47%', padding: 13 },
+  kpiHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  kpiLabel: { color: zenith.colors.muted, fontFamily: zenith.font.mono, fontSize: 9, textTransform: 'uppercase' },
+  kpiValue: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 30, lineHeight: 32, textTransform: 'uppercase' },
+  kpiDetail: { color: zenith.colors.muted, fontFamily: zenith.font.body, fontSize: 11 },
+  overviewCard: { gap: 12 },
+  overviewHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  overviewTitle: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 22, lineHeight: 24, textTransform: 'uppercase' },
+  muscleList: { gap: 12 },
+  muscleRow: { gap: 6 },
+  muscleHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  muscleName: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold },
+  muscleSets: { color: zenith.colors.primary, fontFamily: zenith.font.mono, fontSize: 11 },
+  muscleTrack: { backgroundColor: zenith.colors.secondary, borderRadius: 999, height: 7, overflow: 'hidden' },
+  muscleFill: { backgroundColor: zenith.colors.primary, borderRadius: 999, height: '100%' },
+  topExerciseRow: { alignItems: 'center', borderTopColor: zenith.colors.border, borderTopWidth: 1, flexDirection: 'row', gap: 12, paddingTop: 10 },
+  topExerciseText: { flex: 1, gap: 3 },
+  topExerciseName: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold },
+  topExerciseMeta: { color: zenith.colors.muted, fontFamily: zenith.font.body, fontSize: 11 },
+  topExerciseValue: { color: zenith.colors.primary, fontFamily: zenith.font.display, fontSize: 20 },
   filterSection: { gap: 8 },
   filterLabel: { color: zenith.colors.foreground, fontFamily: zenith.font.mono, fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase' },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

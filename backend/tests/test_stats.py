@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.infrastructure.db.base import Base
-from app.infrastructure.db.models.exercise import Exercise
+from app.infrastructure.db.models.exercise import Exercise, MuscleGroup
 from app.infrastructure.db.session import get_db
 from app.main import app
 
@@ -49,10 +49,20 @@ def register_and_login(client: TestClient, email: str, username: str) -> str:
     return response.json()["access_token"]
 
 
-def seed_global_exercise(session_factory: SessionFactory, name: str = "Bench press") -> Exercise:
+def seed_global_exercise(
+    session_factory: SessionFactory,
+    name: str = "Bench press",
+    muscle_names: list[str] | None = None,
+) -> Exercise:
     db = session_factory()
     try:
+        muscle_groups = []
+        for muscle_name in muscle_names or []:
+            muscle_group = MuscleGroup(name=muscle_name)
+            db.add(muscle_group)
+            muscle_groups.append(muscle_group)
         exercise = Exercise(name=name, difficulty="beginner", is_global=True)
+        exercise.muscle_groups = muscle_groups
         db.add(exercise)
         db.commit()
         db.refresh(exercise)
@@ -77,15 +87,20 @@ def create_session(
     exercise_id: str,
     started_at: datetime,
     sets: list[dict[str, Any]],
+    finished_at: datetime | None = None,
 ) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "started_at": started_at.isoformat(),
+        "timezone": "Europe/Madrid",
+        "sets": [{"exercise_id": exercise_id, **workout_set} for workout_set in sets],
+    }
+    if finished_at is not None:
+        payload["finished_at"] = finished_at.isoformat()
+
     response = client.post(
         "/workout-sessions",
         headers={"Authorization": f"Bearer {token}"},
-        json={
-            "started_at": started_at.isoformat(),
-            "timezone": "Europe/Madrid",
-            "sets": [{"exercise_id": exercise_id, **workout_set} for workout_set in sets],
-        },
+        json=payload,
     )
     assert response.status_code == 201
     return response.json()
@@ -294,3 +309,110 @@ def test_exercise_stats_return_404_for_inaccessible_private_exercise(
     )
 
     assert response.status_code == 404
+
+
+def test_stats_overview_returns_kpis_volume_muscles_and_top_exercises(
+    client_with_db: tuple[TestClient, SessionFactory],
+) -> None:
+    client, session_factory = client_with_db
+    bench = seed_global_exercise(session_factory, name="Bench press", muscle_names=["Pecho"])
+    row = seed_global_exercise(session_factory, name="Barbell row", muscle_names=["Espalda"])
+    token = register_and_login(client, "owner@example.com", "owner_user")
+    other_token = register_and_login(client, "other@example.com", "other_user")
+    create_session(
+        client,
+        token,
+        str(bench.id),
+        datetime(2026, 7, 8, 10, 0, tzinfo=UTC),
+        [
+            {"set_number": 1, "reps": 10, "weight_value": "50", "weight_unit": "kg"},
+            {"set_number": 2, "reps": 5, "weight_value": "60", "weight_unit": "kg"},
+        ],
+        finished_at=datetime(2026, 7, 8, 11, 0, tzinfo=UTC),
+    )
+    create_session(
+        client,
+        token,
+        str(row.id),
+        datetime(2026, 7, 15, 14, 0, tzinfo=UTC),
+        [{"set_number": 1, "reps": 8, "weight_value": "80", "weight_unit": "kg"}],
+        finished_at=datetime(2026, 7, 15, 14, 30, tzinfo=UTC),
+    )
+    create_session(
+        client,
+        token,
+        str(bench.id),
+        datetime(2026, 7, 16, 10, 0, tzinfo=UTC),
+        [{"set_number": 1, "reps": 10, "weight_value": "100", "weight_unit": "lb"}],
+    )
+    create_session(
+        client,
+        other_token,
+        str(bench.id),
+        datetime(2026, 7, 17, 10, 0, tzinfo=UTC),
+        [{"set_number": 1, "reps": 10, "weight_value": "200", "weight_unit": "kg"}],
+    )
+
+    response = client.get(
+        "/stats/overview",
+        headers={"Authorization": f"Bearer {token}"},
+        params={
+            "period": "week",
+            "start_date": datetime(2026, 7, 1, 0, 0, tzinfo=UTC).isoformat(),
+            "end_date": datetime(2026, 7, 31, 23, 59, tzinfo=UTC).isoformat(),
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["kpis"] == {
+        "total_sets": 4,
+        "session_count": 3,
+        "training_hours": "1.50",
+        "pr_count": 3,
+    }
+    assert data["volume_by_unit"] == [
+        {"weight_unit": "kg", "total_volume": "1440.00"},
+        {"weight_unit": "lb", "total_volume": "1000.00"},
+    ]
+    assert data["muscle_groups"] == [
+        {"name": "Pecho", "total_sets": 3},
+        {"name": "Espalda", "total_sets": 1},
+    ]
+    assert data["volume_points"] == [
+        {"period_start": "2026-07-06T00:00:00Z", "weight_unit": "kg", "total_volume": "800.00", "total_sets": 2, "session_count": 1},
+        {"period_start": "2026-07-13T00:00:00Z", "weight_unit": "kg", "total_volume": "640.00", "total_sets": 1, "session_count": 1},
+        {"period_start": "2026-07-13T00:00:00Z", "weight_unit": "lb", "total_volume": "1000.00", "total_sets": 1, "session_count": 1},
+    ]
+    assert data["top_exercises"][0]["exercise_name"] == "Barbell row"
+    assert data["top_exercises"][0]["best_estimated_1rm"] == "101.33"
+
+
+def test_stats_overview_filters_weight_unit_without_mixing_units(
+    client_with_db: tuple[TestClient, SessionFactory],
+) -> None:
+    client, session_factory = client_with_db
+    exercise = seed_global_exercise(session_factory)
+    token = register_and_login(client, "owner@example.com", "owner_user")
+    create_session(
+        client,
+        token,
+        str(exercise.id),
+        datetime(2026, 7, 2, 10, 0, tzinfo=UTC),
+        [
+            {"set_number": 1, "reps": 10, "weight_value": "50", "weight_unit": "kg"},
+            {"set_number": 2, "reps": 10, "weight_value": "100", "weight_unit": "lb"},
+        ],
+    )
+
+    response = client.get(
+        "/stats/overview",
+        headers={"Authorization": f"Bearer {token}"},
+        params={"weight_unit": "kg"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["kpis"]["total_sets"] == 1
+    assert data["volume_by_unit"] == [{"weight_unit": "kg", "total_volume": "500.00"}]
+    assert {point["weight_unit"] for point in data["volume_points"]} == {"kg"}

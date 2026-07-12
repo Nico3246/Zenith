@@ -36,7 +36,7 @@ export default function RootLayout() {
     <>
     <StatusBar style="light" />
     <Stack screenOptions={{ headerStyle: { backgroundColor: zenith.colors.background }, headerTintColor: zenith.colors.foreground, contentStyle: { backgroundColor: zenith.colors.background } }}>
-      <Stack.Screen name="index" options={{ title: 'Zenith' }} />
+      <Stack.Screen name="index" options={{ headerShown: false, title: 'Zenith' }} />
       <Stack.Screen name="login" options={{ title: 'Login' }} />
       <Stack.Screen name="register" options={{ title: 'Registro' }} />
       <Stack.Screen name="dashboard" options={{ headerShown: false, title: 'Inicio' }} />

@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { restoreSession } from '@/api/client';
+import { zenith } from '@/constants/zenithTheme';
 
 export default function IndexScreen() {
   const router = useRouter();
@@ -21,24 +22,18 @@ export default function IndexScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.eyebrow}>Zenith</Text>
-      <Text style={styles.title}>Entrena, registra y progresa con decisiones revisables.</Text>
-      <Text style={styles.subtitle}>
-        Crea rutinas, registra sesiones y usa IA interna para sugerencias que solo se aplican si las aceptas.
-      </Text>
-      <View style={styles.disclaimerBox}>
-        <Text style={styles.disclaimerTitle}>Beta gratuita</Text>
-        <Text style={styles.disclaimerText}>Zenith no sustituye consejo medico ni profesional. Si tienes dolor, lesion o dudas de salud, consulta a un profesional.</Text>
+      <View style={styles.hero}>
+        <Text style={styles.brand}>ZENITH</Text>
+        {checking && <View style={styles.checkingDot} />}
       </View>
-      {checking && <Text style={styles.checking}>Comprobando sesion guardada...</Text>}
       <View style={styles.actions}>
         <Link href="/login" style={styles.primaryLink}>Iniciar sesion</Link>
         <Link href="/register" style={styles.secondaryLink}>Crear cuenta</Link>
       </View>
       <View style={styles.legalLinks}>
         <Link href={'/privacy' as never} style={styles.legalLink}>Privacidad</Link>
-        <Text style={styles.legalSeparator}>|</Text>
-        <Link href={'/terms' as never} style={styles.legalLink}>Terminos</Link>
+        <Text style={styles.legalSeparator}>/</Text>
+        <Link href={'/terms' as never} style={styles.legalLink}>Terminos y condiciones</Link>
       </View>
     </SafeAreaView>
   );
@@ -46,68 +41,34 @@ export default function IndexScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: zenith.colors.background,
     flex: 1,
-    backgroundColor: '#020617',
-    justifyContent: 'flex-end',
-    padding: 24,
-    gap: 18,
+    justifyContent: 'space-between',
+    padding: zenith.spacing.page,
   },
-  eyebrow: {
-    color: '#38bdf8',
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: '#f8fafc',
-    fontSize: 42,
-    fontWeight: '900',
-    lineHeight: 46,
-  },
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 17,
-    lineHeight: 24,
-  },
-  checking: {
-    color: '#94a3b8',
-  },
-  disclaimerBox: {
-    backgroundColor: '#111827',
-    borderColor: '#334155',
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 6,
-    padding: 14,
-  },
-  disclaimerTitle: {
-    color: '#fde68a',
-    fontWeight: '900',
-  },
-  disclaimerText: {
-    color: '#cbd5e1',
-    lineHeight: 21,
-  },
+  hero: { alignItems: 'center', flex: 1, justifyContent: 'center' },
+  brand: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 76, fontWeight: '900', letterSpacing: 8, lineHeight: 82 },
+  checkingDot: { backgroundColor: zenith.colors.primary, borderRadius: 999, height: 7, marginTop: 12, width: 7 },
   actions: {
     gap: 12,
-    marginTop: 16,
-    marginBottom: 18,
+    marginBottom: 22,
   },
   primaryLink: {
-    color: '#020617',
-    backgroundColor: '#38bdf8',
+    backgroundColor: zenith.colors.primary,
     borderRadius: 16,
+    color: zenith.colors.primaryForeground,
+    fontFamily: zenith.font.bodyBold,
     fontSize: 17,
     fontWeight: '800',
     padding: 16,
     textAlign: 'center',
   },
   secondaryLink: {
-    color: '#f8fafc',
-    borderColor: '#334155',
+    borderColor: zenith.colors.border,
     borderRadius: 16,
     borderWidth: 1,
+    color: zenith.colors.foreground,
+    fontFamily: zenith.font.bodyBold,
     fontSize: 17,
     fontWeight: '800',
     padding: 16,
@@ -118,12 +79,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'center',
+    paddingBottom: 8,
   },
   legalLink: {
-    color: '#93c5fd',
+    color: zenith.colors.muted,
+    fontFamily: zenith.font.bodyBold,
     fontWeight: '800',
   },
   legalSeparator: {
-    color: '#64748b',
+    color: zenith.colors.muted,
   },
 });

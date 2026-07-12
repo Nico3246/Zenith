@@ -5,7 +5,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { register } from '@/api/client';
 import { Field } from '@/components/Field';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { Screen } from '@/components/Screen';
+import { ZenithCard, ZenithHeader, ZenithLogo, ZenithNotice } from '@/components/ZenithUI';
+import { ZenithScreen } from '@/components/ZenithScreen';
+import { zenith } from '@/constants/zenithTheme';
 import { registerErrorMessage } from '@/utils/authDisplay';
 
 export default function RegisterScreen() {
@@ -43,52 +45,44 @@ export default function RegisterScreen() {
   }
 
   return (
-    <Screen>
-      <Text style={styles.title}>Crear cuenta</Text>
-      <Field autoCapitalize="none" keyboardType="email-address" label="Email" onChangeText={setEmail} value={email} />
-      <Field autoCapitalize="none" label="Username" onChangeText={setUsername} value={username} />
-      <Field label="Password" onChangeText={setPassword} secureTextEntry value={password} />
-      <View style={styles.noticeBox}>
+    <ZenithScreen>
+      <ZenithLogo />
+      <ZenithHeader title="Crear cuenta" subtitle="Beta Zenith" />
+      <ZenithCard style={styles.formCard}>
+        <Field autoCapitalize="none" keyboardType="email-address" label="Email" onChangeText={setEmail} value={email} />
+        <Field autoCapitalize="none" label="Username" onChangeText={setUsername} value={username} />
+        <Field label="Password" onChangeText={setPassword} secureTextEntry value={password} />
+      </ZenithCard>
+      <ZenithCard style={styles.noticeBox}>
         <Text style={styles.noticeTitle}>Aviso beta</Text>
         <Text style={styles.noticeText}>Zenith no sustituye consejo medico ni profesional. Las limitaciones fisicas son datos sensibles y solo deben indicarse si entiendes el aviso.</Text>
         <View style={styles.legalRow}>
           <Link href={'/privacy' as never} style={styles.link}>Privacidad</Link>
-          <Text style={styles.separator}>|</Text>
+          <Text style={styles.separator}>/</Text>
           <Link href={'/terms' as never} style={styles.link}>Terminos</Link>
         </View>
         <Pressable onPress={() => setAcceptedTerms((current) => !current)} style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
           <Text style={styles.checkboxText}>{acceptedTerms ? 'Avisos aceptados' : 'Acepto privacidad, terminos y aviso medico'}</Text>
         </Pressable>
-      </View>
-      {error && <Text style={styles.error}>{error}</Text>}
+      </ZenithCard>
+      {error && <ZenithNotice tone="danger">{error}</ZenithNotice>}
       <PrimaryButton disabled={loading} onPress={submit} title={loading ? 'Creando...' : 'Registrarme'} />
-    </Screen>
+    </ZenithScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: {
-    color: '#f8fafc',
-    fontSize: 34,
-    fontWeight: '900',
-  },
-  error: {
-    color: '#f87171',
-  },
+  formCard: { gap: 14 },
   noticeBox: {
-    backgroundColor: '#111827',
-    borderColor: '#334155',
-    borderRadius: 16,
-    borderWidth: 1,
     gap: 10,
-    padding: 14,
   },
   noticeTitle: {
-    color: '#fde68a',
-    fontWeight: '900',
+    color: zenith.colors.amber,
+    fontFamily: zenith.font.bodyBold,
   },
   noticeText: {
-    color: '#cbd5e1',
+    color: zenith.colors.foreground,
+    fontFamily: zenith.font.body,
     lineHeight: 21,
   },
   legalRow: {
@@ -97,26 +91,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   link: {
-    color: '#93c5fd',
-    fontWeight: '900',
+    color: zenith.colors.primary,
+    fontFamily: zenith.font.bodyBold,
   },
   separator: {
-    color: '#64748b',
+    color: zenith.colors.muted,
   },
   checkbox: {
     alignItems: 'center',
-    borderColor: '#475569',
+    borderColor: zenith.colors.border,
     borderRadius: 12,
     borderWidth: 1,
     padding: 12,
   },
   checkboxChecked: {
-    backgroundColor: '#164e63',
-    borderColor: '#38bdf8',
+    backgroundColor: zenith.colors.primarySoft,
+    borderColor: zenith.colors.primary,
   },
   checkboxText: {
-    color: '#e0f2fe',
-    fontWeight: '900',
+    color: zenith.colors.foreground,
+    fontFamily: zenith.font.bodyBold,
     textAlign: 'center',
   },
 });

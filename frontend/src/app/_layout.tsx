@@ -1,15 +1,48 @@
+import {
+  BarlowCondensed_700Bold,
+  BarlowCondensed_800ExtraBold,
+} from '@expo-google-fonts/barlow-condensed';
+import {
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_700Bold,
+} from '@expo-google-fonts/dm-sans';
+import {
+  JetBrainsMono_400Regular,
+  JetBrainsMono_500Medium,
+} from '@expo-google-fonts/jetbrains-mono';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+
+import { zenith } from '@/constants/zenithTheme';
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    BarlowCondensed_700Bold,
+    BarlowCondensed_800ExtraBold,
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_700Bold,
+    JetBrainsMono_400Regular,
+    JetBrainsMono_500Medium,
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
-    <Stack screenOptions={{ headerStyle: { backgroundColor: '#0f172a' }, headerTintColor: '#f8fafc' }}>
+    <>
+    <StatusBar style="light" />
+    <Stack screenOptions={{ headerStyle: { backgroundColor: zenith.colors.background }, headerTintColor: zenith.colors.foreground, contentStyle: { backgroundColor: zenith.colors.background } }}>
       <Stack.Screen name="index" options={{ title: 'Zenith' }} />
       <Stack.Screen name="login" options={{ title: 'Login' }} />
       <Stack.Screen name="register" options={{ title: 'Registro' }} />
-      <Stack.Screen name="dashboard" options={{ title: 'Dashboard' }} />
-      <Stack.Screen name="rank" options={{ title: 'Rango' }} />
-      <Stack.Screen name="exercises" options={{ title: 'Ejercicios' }} />
-      <Stack.Screen name="routines" options={{ title: 'Rutinas' }} />
+      <Stack.Screen name="dashboard" options={{ headerShown: false, title: 'Inicio' }} />
+      <Stack.Screen name="rank" options={{ headerShown: false, title: 'Rango' }} />
+      <Stack.Screen name="exercises" options={{ headerShown: false, title: 'Ejercicios' }} />
+      <Stack.Screen name="routines" options={{ headerShown: false, title: 'Rutinas' }} />
       <Stack.Screen name="routine-new" options={{ title: 'Nueva rutina' }} />
       <Stack.Screen name="routine-edit" options={{ title: 'Editar rutina' }} />
       <Stack.Screen name="sessions" options={{ title: 'Sesiones' }} />
@@ -17,11 +50,12 @@ export default function RootLayout() {
       <Stack.Screen name="session-new" options={{ title: 'Nueva sesion' }} />
       <Stack.Screen name="session-detail" options={{ title: 'Detalle sesion' }} />
       <Stack.Screen name="session-edit" options={{ title: 'Editar sesion' }} />
-      <Stack.Screen name="stats" options={{ title: 'Estadisticas' }} />
-      <Stack.Screen name="coach" options={{ title: 'Entrenador IA' }} />
+      <Stack.Screen name="stats" options={{ headerShown: false, title: 'Estadisticas' }} />
+      <Stack.Screen name="coach" options={{ headerShown: false, title: 'Entrenador IA' }} />
       <Stack.Screen name="trainer" options={{ title: 'Entrenador personal' }} />
       <Stack.Screen name="privacy" options={{ title: 'Privacidad' }} />
       <Stack.Screen name="terms" options={{ title: 'Terminos' }} />
     </Stack>
+    </>
   );
 }

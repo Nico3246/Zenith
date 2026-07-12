@@ -6,8 +6,10 @@ import { Exercise, getExercises, getRoutines, getWorkoutSession, Routine, update
 import { Field } from '@/components/Field';
 import { PickerField } from '@/components/PickerField';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { Screen } from '@/components/Screen';
 import { SegmentedField } from '@/components/SegmentedField';
+import { ZenithCard, ZenithHeader, ZenithNotice } from '@/components/ZenithUI';
+import { ZenithScreen } from '@/components/ZenithScreen';
+import { zenith } from '@/constants/zenithTheme';
 import { buildWorkoutSets, duplicateSetRow, newSetRow, SetRow, WeightUnit } from '@/utils/sessionForm';
 
 const UNIT_OPTIONS = [
@@ -138,9 +140,9 @@ export default function EditSessionScreen() {
   const routineOptions = [{ label: 'Sin rutina', value: '' }, ...routines.map((routine) => ({ label: routine.name, value: routine.id }))];
 
   return (
-    <Screen>
-      <Text style={styles.title}>Editar sesion</Text>
-      {loading && <Text style={styles.empty}>Cargando sesion...</Text>}
+    <ZenithScreen>
+      <ZenithHeader title="Editar sesion" subtitle="Historial" />
+      {loading && <ZenithNotice>Cargando sesion...</ZenithNotice>}
       <PickerField label="Rutina opcional" onValueChange={setRoutineId} options={routineOptions} selectedValue={routineId} />
       <Field label="Inicio ISO" onChangeText={setStartedAt} value={startedAt} />
       <Field label="Fin ISO opcional" onChangeText={setFinishedAt} value={finishedAt} />
@@ -148,7 +150,7 @@ export default function EditSessionScreen() {
       <Field label="Notas opcionales" multiline onChangeText={setNotes} value={notes} />
       <Text style={styles.section}>Series</Text>
       {rows.map((row, index) => (
-        <View key={row.key} style={styles.card}>
+        <ZenithCard key={row.key} style={styles.card}>
           <Text style={styles.cardTitle}>Serie {index + 1}</Text>
           <PickerField
             label="Ejercicio"
@@ -180,30 +182,27 @@ export default function EditSessionScreen() {
               </Pressable>
             )}
           </View>
-        </View>
+        </ZenithCard>
       ))}
       <Pressable onPress={addRow} style={styles.secondaryButton}>
         <Text style={styles.secondaryText}>Anadir serie</Text>
       </Pressable>
-      {!id && <Text style={styles.error}>Sesion no encontrada.</Text>}
-      {error && <Text style={styles.error}>{error}</Text>}
+      {!id && <ZenithNotice tone="danger">Sesion no encontrada.</ZenithNotice>}
+      {error && <ZenithNotice tone="danger">{error}</ZenithNotice>}
       <PrimaryButton disabled={saving || loading || exercises.length === 0} onPress={submit} title={saving ? 'Guardando...' : 'Guardar sesion'} />
-    </Screen>
+    </ZenithScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { color: '#f8fafc', fontSize: 34, fontWeight: '900' },
-  section: { color: '#f8fafc', fontSize: 18, fontWeight: '900' },
-  card: { backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: 16, borderWidth: 1, gap: 12, padding: 14 },
-  cardTitle: { color: '#f8fafc', fontSize: 16, fontWeight: '800' },
+  section: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 24, textTransform: 'uppercase' },
+  card: { gap: 12 },
+  cardTitle: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 23, textTransform: 'uppercase' },
   grid: { gap: 12 },
   actionsRow: { flexDirection: 'row', gap: 10 },
-  secondaryButton: { alignItems: 'center', borderColor: '#38bdf8', borderRadius: 14, borderWidth: 1, padding: 14 },
-  secondarySmallButton: { alignItems: 'center', borderColor: '#38bdf8', borderRadius: 12, borderWidth: 1, flex: 1, padding: 10 },
-  secondaryText: { color: '#7dd3fc', fontWeight: '900' },
-  removeSmallButton: { alignItems: 'center', borderColor: '#ef4444', borderRadius: 12, borderWidth: 1, flex: 1, padding: 10 },
-  removeText: { color: '#fca5a5', fontWeight: '800' },
-  empty: { backgroundColor: '#0f172a', borderRadius: 16, color: '#cbd5e1', padding: 16 },
-  error: { color: '#f87171' },
+  secondaryButton: { alignItems: 'center', borderColor: zenith.colors.primaryBorder, borderRadius: 16, borderWidth: 1, padding: 14 },
+  secondarySmallButton: { alignItems: 'center', borderColor: zenith.colors.primaryBorder, borderRadius: 12, borderWidth: 1, flex: 1, padding: 10 },
+  secondaryText: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold },
+  removeSmallButton: { alignItems: 'center', borderColor: 'rgba(232,64,64,0.35)', borderRadius: 12, borderWidth: 1, flex: 1, padding: 10 },
+  removeText: { color: '#fca5a5', fontFamily: zenith.font.bodyBold },
 });

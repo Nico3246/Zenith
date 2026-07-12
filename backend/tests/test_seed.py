@@ -26,3 +26,19 @@ def test_seed_database_is_idempotent() -> None:
     finally:
         db.close()
         Base.metadata.drop_all(bind=engine)
+
+
+def test_seed_catalog_has_valid_references() -> None:
+    exercise_names = [exercise["name"] for exercise in EXERCISES]
+
+    assert len(EXERCISES) >= 220
+    assert len(exercise_names) == len(set(exercise_names))
+
+    valid_difficulties = {"beginner", "intermediate", "advanced"}
+    known_muscles = set(MUSCLE_GROUPS)
+    known_equipment = set(EQUIPMENT)
+
+    for exercise in EXERCISES:
+        assert exercise["difficulty"] in valid_difficulties
+        assert set(exercise["muscle_groups"]).issubset(known_muscles)
+        assert set(exercise["equipment"]).issubset(known_equipment)

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Exercise } from '@/api/client';
 import { Field } from '@/components/Field';
+import { zenith } from '@/constants/zenithTheme';
 
 type ExerciseSelectorProps = {
   label: string;
@@ -197,31 +198,31 @@ function exerciseMeta(exercise: Exercise) {
 
 const styles = StyleSheet.create({
   container: { gap: 8 },
-  label: { color: '#cbd5e1', fontSize: 13, fontWeight: '700', textTransform: 'uppercase' },
-  selectedButton: { alignItems: 'center', backgroundColor: '#020617', borderColor: '#334155', borderRadius: 14, borderWidth: 1, flexDirection: 'row', gap: 12, padding: 14 },
+  label: { color: zenith.colors.muted, fontFamily: zenith.font.mono, fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase' },
+  selectedButton: { alignItems: 'center', backgroundColor: zenith.colors.secondary, borderColor: zenith.colors.border, borderRadius: 16, borderWidth: 1, flexDirection: 'row', gap: 12, padding: 14 },
   selectedTextBlock: { flex: 1, gap: 4 },
-  selectedName: { color: '#f8fafc', fontSize: 16, fontWeight: '900' },
-  selectedMeta: { color: '#94a3b8', fontSize: 12, lineHeight: 17 },
-  toggleText: { color: '#38bdf8', fontSize: 13, fontWeight: '900' },
-  panel: { backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: 16, borderWidth: 1, gap: 14, padding: 12 },
+  selectedName: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold, fontSize: 16 },
+  selectedMeta: { color: zenith.colors.muted, fontFamily: zenith.font.body, fontSize: 12, lineHeight: 17 },
+  toggleText: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold, fontSize: 13 },
+  panel: { backgroundColor: zenith.colors.background, borderColor: zenith.colors.border, borderRadius: 16, borderWidth: 1, gap: 14, padding: 12 },
   filterGroup: { gap: 8 },
-  filterLabel: { color: '#94a3b8', fontSize: 12, fontWeight: '900' },
+  filterLabel: { color: zenith.colors.muted, fontFamily: zenith.font.mono, fontSize: 10, textTransform: 'uppercase' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { borderColor: '#334155', borderRadius: 999, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 7 },
-  chipSelected: { backgroundColor: '#38bdf8', borderColor: '#38bdf8' },
-  chipText: { color: '#cbd5e1', fontSize: 12, fontWeight: '800' },
-  chipTextSelected: { color: '#020617' },
-  clearButton: { alignItems: 'center', borderColor: '#64748b', borderRadius: 12, borderWidth: 1, padding: 10 },
-  clearText: { color: '#cbd5e1', fontWeight: '900' },
-  resultCount: { color: '#64748b', fontSize: 12, fontWeight: '800' },
+  chip: { borderColor: zenith.colors.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 7 },
+  chipSelected: { backgroundColor: zenith.colors.primary, borderColor: zenith.colors.primary },
+  chipText: { color: zenith.colors.muted, fontFamily: zenith.font.bodyBold, fontSize: 12 },
+  chipTextSelected: { color: zenith.colors.primaryForeground },
+  clearButton: { alignItems: 'center', borderColor: zenith.colors.border, borderRadius: 12, borderWidth: 1, padding: 10 },
+  clearText: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold },
+  resultCount: { color: zenith.colors.muted, fontFamily: zenith.font.mono, fontSize: 11 },
   results: { gap: 10 },
-  resultCard: { backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: 14, borderWidth: 1, gap: 6, padding: 12 },
-  resultCardSelected: { borderColor: '#38bdf8' },
+  resultCard: { backgroundColor: zenith.colors.card, borderColor: zenith.colors.border, borderRadius: 14, borderWidth: 1, gap: 6, padding: 12 },
+  resultCardSelected: { borderColor: zenith.colors.primary },
   resultHeader: { alignItems: 'center', flexDirection: 'row', gap: 8, justifyContent: 'space-between' },
-  resultName: { color: '#f8fafc', flex: 1, fontSize: 15, fontWeight: '900' },
-  badge: { backgroundColor: '#1e293b', borderRadius: 999, color: '#cbd5e1', fontSize: 11, fontWeight: '900', paddingHorizontal: 8, paddingVertical: 4 },
-  badgeSelected: { backgroundColor: '#38bdf8', color: '#020617' },
-  resultMeta: { color: '#94a3b8', fontSize: 12, lineHeight: 17 },
-  description: { color: '#cbd5e1', fontSize: 12, lineHeight: 17 },
-  empty: { color: '#cbd5e1', padding: 10 },
+  resultName: { color: zenith.colors.foreground, flex: 1, fontFamily: zenith.font.bodyBold, fontSize: 15 },
+  badge: { backgroundColor: zenith.colors.secondary, borderRadius: 999, color: zenith.colors.muted, fontFamily: zenith.font.mono, fontSize: 10, paddingHorizontal: 8, paddingVertical: 4 },
+  badgeSelected: { backgroundColor: zenith.colors.primary, color: zenith.colors.primaryForeground },
+  resultMeta: { color: zenith.colors.muted, fontFamily: zenith.font.body, fontSize: 12, lineHeight: 17 },
+  description: { color: zenith.colors.foreground, fontFamily: zenith.font.body, fontSize: 12, lineHeight: 17 },
+  empty: { color: zenith.colors.foreground, fontFamily: zenith.font.body, padding: 10 },
 });

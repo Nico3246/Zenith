@@ -1,13 +1,15 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Check, SkipForward } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-//import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { createWorkoutSession, Exercise, getExercises, getRoutine, getWorkoutSessions, Routine, WorkoutSession } from '@/api/client';
 import { Field } from '@/components/Field';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { Screen } from '@/components/Screen';
 import { SegmentedField } from '@/components/SegmentedField';
+import { ZenithCard, ZenithNotice } from '@/components/ZenithUI';
+import { ZenithScreen } from '@/components/ZenithScreen';
+import { zenith } from '@/constants/zenithTheme';
 import { buildWorkoutSets, SetRow, WeightUnit } from '@/utils/sessionForm';
 import { exerciseName, formatPlannedExercise } from '@/utils/workoutDisplay';
 import { progressionHintForExercise } from '@/utils/progression';
@@ -241,20 +243,39 @@ export default function ActiveSessionScreen() {
     : 0;
 
   return (
-    <Screen>
-      <Text style={styles.title}>Sesion activa</Text>
-      {loading && <Text style={styles.empty}>Cargando rutina...</Text>}
-      {!id && <Text style={styles.error}>Rutina no encontrada.</Text>}
+    <ZenithScreen>
+      {loading && <ZenithNotice>Cargando rutina...</ZenithNotice>}
+      {!id && <ZenithNotice tone="danger">Rutina no encontrada.</ZenithNotice>}
       {routine && (
-        <View style={styles.headerCard}>
-          <Text style={styles.routineName}>{routine.name}</Text>
+        <ZenithCard style={styles.headerCard}>
+          <View style={styles.liveRow}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>En sesion</Text>
+          </View>
+          <View style={styles.headerMain}>
+            <View style={styles.headerTitleBlock}>
+              <Text style={styles.routineName}>{routine.name}</Text>
+              {routine.goal && <Text style={styles.meta}>{routine.goal}</Text>}
+            </View>
+            <View style={styles.timerBlock}>
+              <Text style={styles.timer}>{formatDuration(elapsedSeconds)}</Text>
+              <Text style={styles.timerLabel}>duracion</Text>
+            </View>
+          </View>
           {routine.goal && <Text style={styles.meta}>{routine.goal}</Text>}
-          <Text style={styles.meta}>Tiempo: {formatDuration(elapsedSeconds)} · Inicio: {new Date(startedAt).toLocaleTimeString()}</Text>
-          <Text style={styles.meta}>Ejercicios: {completedExerciseCount}/{routine.exercises.length} · Series: {completedCount}/{rows.length}</Text>
-          {restRemaining > 0 && <Text style={styles.restTimer}>Descanso: {formatDuration(restRemaining)}</Text>}
-        </View>
+          <Text style={styles.meta}>Inicio: {new Date(startedAt).toLocaleTimeString()}</Text>
+          <Text style={styles.meta}>Ejercicios: {completedExerciseCount}/{routine.exercises.length} | Series: {completedCount}/{rows.length}</Text>
+          <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${rows.length > 0 ? (completedCount / rows.length) * 100 : 0}%` }]} /></View>
+          {restRemaining > 0 && (
+            <View style={styles.restBox}>
+              <Text style={styles.restTimer}>{formatDuration(restRemaining)}</Text>
+              <Text style={styles.restLabel}>Descanso activo</Text>
+              <Pressable onPress={() => setRestRemaining(0)} style={styles.skipRest}><SkipForward color={zenith.colors.muted} size={12} /><Text style={styles.skipRestText}>Saltar</Text></Pressable>
+            </View>
+          )}
+        </ZenithCard>
       )}
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error && <ZenithNotice tone="danger">{error}</ZenithNotice>}
 
       {routine && [...routine.exercises]
         .sort((left, right) => left.position - right.position)
@@ -264,7 +285,7 @@ export default function ActiveSessionScreen() {
           const exerciseCompleted = exerciseRows.length > 0 && exerciseRows.every((row) => row.completed);
           const hint = progressionHintForExercise(planned, previousSessions);
           return (
-            <View key={plannedKey} style={[styles.exerciseCard, exerciseCompleted && styles.exerciseCompletedCard]}>
+            <ZenithCard key={plannedKey} style={exerciseCompleted ? [styles.exerciseCard, styles.exerciseCompletedCard] : styles.exerciseCard}>
               <Text style={styles.exerciseTitle}>{planned.position}. {exerciseName(planned.exercise_id, exercises)}</Text>
               {exerciseCompleted && <Text style={styles.completedLabel}>Ejercicio completo</Text>}
               <Text style={styles.meta}>{formatPlannedExercise(planned)}</Text>
@@ -295,6 +316,7 @@ export default function ActiveSessionScreen() {
                     </Pressable>
                   </View>
                   <Pressable onPress={() => toggleCompleted(row, planned.rest_seconds)} style={[styles.completeButton, row.completed && styles.completedButton]}>
+                    {row.completed && <Check color={zenith.colors.primaryForeground} size={13} />}
                     <Text style={[styles.completeText, row.completed && styles.completedText]}>{row.completed ? 'Completada' : 'Marcar completada'}</Text>
                   </Pressable>
                 </View>
@@ -302,7 +324,7 @@ export default function ActiveSessionScreen() {
               <Pressable onPress={() => addSet(plannedKey, planned.exercise_id, planned.target_reps_min?.toString() ?? '10')} style={styles.addSetButton}>
                 <Text style={styles.addSetText}>Anadir serie extra</Text>
               </Pressable>
-            </View>
+            </ZenithCard>
           );
         })}
 
@@ -310,39 +332,50 @@ export default function ActiveSessionScreen() {
       <Pressable onPress={cancelSession} style={styles.cancelButton}>
         <Text style={styles.cancelText}>{cancelConfirm ? 'Pulsar otra vez para salir sin guardar' : 'Salir sin guardar'}</Text>
       </Pressable>
-    </Screen>
+    </ZenithScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { color: '#f8fafc', fontSize: 34, fontWeight: '900' },
-  headerCard: { backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: 18, borderWidth: 1, gap: 6, padding: 16 },
-  routineName: { color: '#f8fafc', fontSize: 22, fontWeight: '900' },
-  exerciseCard: { backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: 18, borderWidth: 1, gap: 12, padding: 16 },
-  exerciseCompletedCard: { borderColor: '#22c55e' },
-  exerciseTitle: { color: '#f8fafc', fontSize: 18, fontWeight: '900' },
-  completedLabel: { color: '#86efac', fontWeight: '900' },
-  restTimer: { color: '#facc15', fontSize: 18, fontWeight: '900' },
-  hintCard: { backgroundColor: '#082f49', borderRadius: 12, gap: 4, padding: 10 },
-  hintTitle: { color: '#bae6fd', fontWeight: '900' },
-  hintText: { color: '#e0f2fe' },
-  setCard: { backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: 14, borderWidth: 1, gap: 10, padding: 12 },
-  completedCard: { borderColor: '#22c55e' },
-  setTitle: { color: '#f8fafc', fontWeight: '900' },
+  headerCard: { borderColor: zenith.colors.primaryBorder, gap: 10 },
+  liveRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
+  liveDot: { backgroundColor: zenith.colors.primary, borderRadius: 999, height: 7, width: 7 },
+  liveText: { color: zenith.colors.primary, fontFamily: zenith.font.mono, fontSize: 10, textTransform: 'uppercase' },
+  headerMain: { alignItems: 'flex-start', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
+  headerTitleBlock: { flex: 1 },
+  routineName: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 30, lineHeight: 32, textTransform: 'uppercase' },
+  timerBlock: { alignItems: 'flex-end' },
+  timer: { color: zenith.colors.primary, fontFamily: zenith.font.display, fontSize: 32, lineHeight: 34 },
+  timerLabel: { color: zenith.colors.muted, fontFamily: zenith.font.mono, fontSize: 10 },
+  progressTrack: { backgroundColor: zenith.colors.secondary, borderRadius: 999, height: 6, overflow: 'hidden' },
+  progressFill: { backgroundColor: zenith.colors.primary, borderRadius: 999, height: '100%' },
+  restBox: { alignItems: 'center', backgroundColor: zenith.colors.primarySoft, borderColor: zenith.colors.primaryBorder, borderRadius: 18, borderWidth: 1, gap: 4, padding: 14 },
+  restTimer: { color: zenith.colors.primary, fontFamily: zenith.font.display, fontSize: 46, lineHeight: 48 },
+  restLabel: { color: zenith.colors.muted, fontFamily: zenith.font.mono, fontSize: 10, textTransform: 'uppercase' },
+  skipRest: { alignItems: 'center', flexDirection: 'row', gap: 5, marginTop: 4 },
+  skipRestText: { color: zenith.colors.muted, fontFamily: zenith.font.bodyMedium, fontSize: 12 },
+  exerciseCard: { gap: 12 },
+  exerciseCompletedCard: { borderColor: zenith.colors.cyan },
+  exerciseTitle: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 25, lineHeight: 27, textTransform: 'uppercase' },
+  completedLabel: { color: zenith.colors.cyan, fontFamily: zenith.font.bodyBold },
+  hintCard: { backgroundColor: zenith.colors.primarySoft, borderColor: zenith.colors.primaryBorder, borderRadius: 12, borderWidth: 1, gap: 4, padding: 10 },
+  hintTitle: { color: zenith.colors.primary, fontFamily: zenith.font.mono, fontSize: 10, textTransform: 'uppercase' },
+  hintText: { color: zenith.colors.foreground, fontFamily: zenith.font.body, fontSize: 12, lineHeight: 18 },
+  setCard: { backgroundColor: zenith.colors.background, borderColor: zenith.colors.border, borderRadius: 14, borderWidth: 1, gap: 10, padding: 12 },
+  completedCard: { borderColor: zenith.colors.cyan },
+  setTitle: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold },
   grid: { gap: 10 },
   setActions: { flexDirection: 'row', gap: 10 },
-  meta: { color: '#94a3b8' },
-  notes: { color: '#cbd5e1', fontStyle: 'italic' },
-  copyButton: { alignItems: 'center', borderColor: '#64748b', borderRadius: 12, borderWidth: 1, flex: 1, padding: 10 },
-  copyText: { color: '#cbd5e1', fontWeight: '800' },
-  completeButton: { alignItems: 'center', borderColor: '#38bdf8', borderRadius: 12, borderWidth: 1, padding: 12 },
-  completedButton: { backgroundColor: '#22c55e', borderColor: '#22c55e' },
-  completeText: { color: '#7dd3fc', fontWeight: '900' },
-  completedText: { color: '#052e16' },
-  addSetButton: { alignItems: 'center', borderColor: '#38bdf8', borderRadius: 12, borderWidth: 1, padding: 12 },
-  addSetText: { color: '#7dd3fc', fontWeight: '900' },
-  cancelButton: { alignItems: 'center', borderColor: '#ef4444', borderRadius: 14, borderWidth: 1, padding: 14 },
-  cancelText: { color: '#fca5a5', fontWeight: '900' },
-  empty: { backgroundColor: '#0f172a', borderRadius: 16, color: '#cbd5e1', padding: 16 },
-  error: { color: '#f87171' },
+  meta: { color: zenith.colors.muted, fontFamily: zenith.font.body },
+  notes: { color: zenith.colors.foreground, fontFamily: zenith.font.body, fontStyle: 'italic' },
+  copyButton: { alignItems: 'center', borderColor: zenith.colors.border, borderRadius: 12, borderWidth: 1, flex: 1, padding: 10 },
+  copyText: { color: zenith.colors.muted, fontFamily: zenith.font.bodyBold },
+  completeButton: { alignItems: 'center', borderColor: zenith.colors.primaryBorder, borderRadius: 12, borderWidth: 1, flexDirection: 'row', gap: 7, justifyContent: 'center', padding: 12 },
+  completedButton: { backgroundColor: zenith.colors.primary, borderColor: zenith.colors.primary },
+  completeText: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold },
+  completedText: { color: zenith.colors.primaryForeground },
+  addSetButton: { alignItems: 'center', borderColor: zenith.colors.primaryBorder, borderRadius: 12, borderWidth: 1, padding: 12 },
+  addSetText: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold },
+  cancelButton: { alignItems: 'center', borderColor: 'rgba(232,64,64,0.35)', borderRadius: 14, borderWidth: 1, padding: 14 },
+  cancelText: { color: '#fca5a5', fontFamily: zenith.font.bodyBold },
 });

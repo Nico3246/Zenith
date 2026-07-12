@@ -21,8 +21,10 @@ import {
 } from '@/api/client';
 import { Field } from '@/components/Field';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { Screen } from '@/components/Screen';
 import { SegmentedField } from '@/components/SegmentedField';
+import { ZenithCard, ZenithHeader, ZenithNotice, ZenithPill } from '@/components/ZenithUI';
+import { ZenithScreen } from '@/components/ZenithScreen';
+import { zenith } from '@/constants/zenithTheme';
 
 const GOALS: { label: string; value: TrainingPlanGoal }[] = [
   { label: 'Hipertrofia', value: 'hypertrophy' },
@@ -288,9 +290,8 @@ export default function TrainerScreen() {
   }
 
   return (
-    <Screen>
-      <Text style={styles.kicker}>Entrenador personal</Text>
-      <Text style={styles.title}>Crea un plan adaptativo</Text>
+    <ZenithScreen>
+      <ZenithHeader title="Plan adaptativo" subtitle="Entrenador personal" />
       <Text style={styles.subtitle}>La IA genera una rutina por dia disponible. Al aceptar, se crean rutinas reales en tu cuenta.</Text>
       <SegmentedField label="Objetivo" onValueChange={(value) => setGoal(value as TrainingPlanGoal)} options={GOALS} selectedValue={goal} />
       <SegmentedField label="Nivel" onValueChange={(value) => setLevel(value as TrainingPlanLevel)} options={LEVELS} selectedValue={level} />
@@ -309,9 +310,9 @@ export default function TrainerScreen() {
         </Pressable>
       </View>
       <PrimaryButton disabled={saving} onPress={submitGenerate} title={saving ? 'Generando...' : 'Generar plan'} />
-      {notice && <Text style={styles.notice}>{notice}</Text>}
-      {error && <Text style={styles.error}>{error}</Text>}
-      <View style={styles.questionBox}>
+      {notice && <ZenithNotice tone="success">{notice}</ZenithNotice>}
+      {error && <ZenithNotice tone="danger">{error}</ZenithNotice>}
+      <ZenithCard style={styles.questionBox}>
         <Text style={styles.questionTitle}>Preguntar al entrenador</Text>
         <Text style={styles.questionText}>Preguntas guiadas sin chat libre: no se guardan y no modifican rutinas, sesiones ni planes.</Text>
         <SegmentedField label="Pregunta" onValueChange={(value) => setQuestionType(value as AiCoachQuestionType)} options={QUESTION_TYPES} selectedValue={questionType} />
@@ -346,28 +347,28 @@ export default function TrainerScreen() {
             {questionResponse.suggested_actions.map((action, index) => <Text key={`action-${index}`} style={styles.actionItem}>Accion: {action}</Text>)}
           </View>
         )}
-      </View>
-      <View style={styles.summarySectionBox}>
+      </ZenithCard>
+      <ZenithCard style={styles.summarySectionBox}>
         <Text style={styles.questionTitle}>Resumenes post-sesion</Text>
         <Text style={styles.questionText}>Genera o revisa resumenes IA desde el detalle de cada sesion. El resumen no modifica rutinas ni registros.</Text>
         {loading && <Text style={styles.emptyInline}>Cargando sesiones...</Text>}
         {!loading && sessions.length === 0 && <Text style={styles.emptyInline}>Todavia no hay sesiones para resumir.</Text>}
         {sessions.slice(0, 4).map((session) => (
-          <View key={session.id} style={styles.sessionSummaryCard}>
+          <ZenithCard key={session.id} style={styles.sessionSummaryCard}>
             <Text style={styles.sessionTitle}>{new Date(session.started_at).toLocaleDateString()} · {routineNameById(session.routine_id, routines)}</Text>
             <Text style={styles.cardText}>{session.sets.length} series registradas</Text>
             <Link href={{ pathname: '/session-detail', params: { sessionId: session.id } }} style={styles.summaryLink}>Abrir y generar resumen IA</Link>
-          </View>
+          </ZenithCard>
         ))}
-      </View>
+      </ZenithCard>
       <Text style={styles.section}>Mis planes</Text>
       {loading && <Text style={styles.empty}>Cargando planes...</Text>}
       {!loading && plans.length === 0 && <Text style={styles.empty}>Todavia no hay planes generados.</Text>}
       {plans.map((plan) => (
-        <View key={plan.id} style={styles.card}>
+        <ZenithCard key={plan.id} style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>{plan.days_per_week} dias · {plan.goal}</Text>
-            <Text style={styles.status}>{plan.status}</Text>
+            <ZenithPill active={plan.status === 'draft'}>{plan.status}</ZenithPill>
           </View>
           <Text style={styles.cardText}>{plan.explanation}</Text>
           {modifiedFrom(plan) && <Text style={styles.versionText}>Version modificada de otro plan.</Text>}
@@ -414,66 +415,61 @@ export default function TrainerScreen() {
               </View>
             </View>
           )}
-        </View>
+        </ZenithCard>
       ))}
-    </Screen>
+    </ZenithScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  kicker: { color: '#22c55e', fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' },
-  title: { color: '#f8fafc', fontSize: 34, fontWeight: '900' },
-  subtitle: { color: '#cbd5e1', fontSize: 16, lineHeight: 23 },
+  subtitle: { color: zenith.colors.muted, fontFamily: zenith.font.body, fontSize: 16, lineHeight: 23 },
   grid: { gap: 12 },
-  sensitiveBox: { backgroundColor: '#1f1111', borderColor: '#7f1d1d', borderRadius: 16, borderWidth: 1, gap: 10, padding: 14 },
-  sensitiveTitle: { color: '#fecaca', fontSize: 16, fontWeight: '900' },
-  sensitiveText: { color: '#fca5a5', lineHeight: 20 },
-  checkbox: { alignItems: 'center', borderColor: '#fca5a5', borderRadius: 12, borderWidth: 1, padding: 12 },
-  checkboxChecked: { backgroundColor: '#7f1d1d' },
-  checkboxText: { color: '#fecaca', fontWeight: '900', textAlign: 'center' },
-  section: { color: '#f8fafc', fontSize: 20, fontWeight: '900' },
-  card: { backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: 18, borderWidth: 1, gap: 10, padding: 16 },
+  sensitiveBox: { backgroundColor: zenith.colors.dangerSoft, borderColor: 'rgba(232,64,64,0.28)', borderRadius: 16, borderWidth: 1, gap: 10, padding: 14 },
+  sensitiveTitle: { color: '#fecaca', fontFamily: zenith.font.bodyBold, fontSize: 16 },
+  sensitiveText: { color: '#fca5a5', fontFamily: zenith.font.body, lineHeight: 20 },
+  checkbox: { alignItems: 'center', borderColor: zenith.colors.border, borderRadius: 12, borderWidth: 1, padding: 12 },
+  checkboxChecked: { backgroundColor: zenith.colors.primarySoft, borderColor: zenith.colors.primary },
+  checkboxText: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold, textAlign: 'center' },
+  section: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 24, lineHeight: 27, textTransform: 'uppercase' },
+  card: { gap: 10 },
   cardHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  cardTitle: { color: '#f8fafc', fontSize: 16, fontWeight: '900' },
-  status: { backgroundColor: '#064e3b', borderRadius: 999, color: '#bbf7d0', fontSize: 12, fontWeight: '900', overflow: 'hidden', paddingHorizontal: 10, paddingVertical: 5 },
-  cardText: { color: '#cbd5e1', lineHeight: 21 },
-  risk: { color: '#fca5a5', fontWeight: '700', lineHeight: 20 },
-  versionText: { color: '#93c5fd', fontWeight: '800' },
-  providerText: { color: '#a7f3d0', fontSize: 12, fontWeight: '800' },
-  questionBox: { backgroundColor: '#07111f', borderColor: '#1e40af', borderRadius: 18, borderWidth: 1, gap: 12, padding: 16 },
-  questionTitle: { color: '#bfdbfe', fontSize: 20, fontWeight: '900' },
-  questionText: { color: '#cbd5e1', lineHeight: 20 },
+  cardTitle: { color: zenith.colors.foreground, flex: 1, fontFamily: zenith.font.display, fontSize: 22, lineHeight: 24, textTransform: 'uppercase' },
+  cardText: { color: zenith.colors.foreground, fontFamily: zenith.font.body, lineHeight: 21 },
+  risk: { color: '#fca5a5', fontFamily: zenith.font.bodyBold, lineHeight: 20 },
+  versionText: { color: zenith.colors.violet, fontFamily: zenith.font.bodyBold },
+  providerText: { color: zenith.colors.cyan, fontFamily: zenith.font.mono, fontSize: 11 },
+  questionBox: { borderColor: zenith.colors.primaryBorder, gap: 12 },
+  questionTitle: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 24, lineHeight: 26, textTransform: 'uppercase' },
+  questionText: { color: zenith.colors.muted, fontFamily: zenith.font.body, lineHeight: 20 },
   routineSelector: { gap: 8 },
-  routineSelectorLabel: { color: '#cbd5e1', fontSize: 13, fontWeight: '700', textTransform: 'uppercase' },
-  routineOption: { borderColor: '#334155', borderRadius: 12, borderWidth: 1, padding: 11 },
-  routineOptionSelected: { backgroundColor: '#38bdf8', borderColor: '#38bdf8' },
-  routineOptionText: { color: '#cbd5e1', fontWeight: '800' },
-  routineOptionTextSelected: { color: '#020617' },
-  emptyInline: { color: '#94a3b8' },
-  answerBox: { backgroundColor: '#020617', borderRadius: 14, gap: 8, padding: 12 },
-  answerTitle: { color: '#f8fafc', fontWeight: '900' },
-  answerItem: { color: '#cbd5e1', lineHeight: 20 },
-  actionItem: { color: '#86efac', fontWeight: '800', lineHeight: 20 },
-  summarySectionBox: { backgroundColor: '#0b1220', borderColor: '#164e63', borderRadius: 18, borderWidth: 1, gap: 12, padding: 16 },
-  sessionSummaryCard: { backgroundColor: '#020617', borderColor: '#155e75', borderRadius: 14, borderWidth: 1, gap: 6, padding: 12 },
-  sessionTitle: { color: '#cffafe', fontWeight: '900' },
-  summaryLink: { color: '#67e8f9', fontWeight: '900' },
-  routineBox: { backgroundColor: '#020617', borderRadius: 12, gap: 4, padding: 10 },
-  routineTitle: { color: '#bfdbfe', fontWeight: '900' },
-  exerciseLine: { color: '#cbd5e1', fontSize: 13, lineHeight: 19 },
-  progressionText: { color: '#fde68a', fontWeight: '800', lineHeight: 20 },
-  draftBox: { backgroundColor: '#07111f', borderColor: '#1e3a8a', borderRadius: 14, borderWidth: 1, gap: 10, padding: 12 },
-  modifyTitle: { color: '#bfdbfe', fontSize: 15, fontWeight: '900' },
-  modifyText: { color: '#cbd5e1', lineHeight: 20 },
-  modifyButton: { alignItems: 'center', backgroundColor: '#38bdf8', borderRadius: 12, padding: 12 },
-  modifyButtonText: { color: '#082f49', fontWeight: '900' },
+  routineSelectorLabel: { color: zenith.colors.muted, fontFamily: zenith.font.mono, fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase' },
+  routineOption: { borderColor: zenith.colors.border, borderRadius: 12, borderWidth: 1, padding: 11 },
+  routineOptionSelected: { backgroundColor: zenith.colors.primary, borderColor: zenith.colors.primary },
+  routineOptionText: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold },
+  routineOptionTextSelected: { color: zenith.colors.primaryForeground },
+  emptyInline: { color: zenith.colors.muted, fontFamily: zenith.font.body },
+  answerBox: { backgroundColor: zenith.colors.background, borderRadius: 14, gap: 8, padding: 12 },
+  answerTitle: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold },
+  answerItem: { color: zenith.colors.foreground, fontFamily: zenith.font.body, lineHeight: 20 },
+  actionItem: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold, lineHeight: 20 },
+  summarySectionBox: { gap: 12 },
+  sessionSummaryCard: { backgroundColor: zenith.colors.background, gap: 6, padding: 12 },
+  sessionTitle: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold },
+  summaryLink: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold },
+  routineBox: { backgroundColor: zenith.colors.background, borderRadius: 12, gap: 4, padding: 10 },
+  routineTitle: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold },
+  exerciseLine: { color: zenith.colors.foreground, fontFamily: zenith.font.body, fontSize: 13, lineHeight: 19 },
+  progressionText: { color: zenith.colors.amber, fontFamily: zenith.font.bodyBold, lineHeight: 20 },
+  draftBox: { backgroundColor: zenith.colors.secondary, borderColor: zenith.colors.border, borderRadius: 14, borderWidth: 1, gap: 10, padding: 12 },
+  modifyTitle: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold, fontSize: 15 },
+  modifyText: { color: zenith.colors.muted, fontFamily: zenith.font.body, lineHeight: 20 },
+  modifyButton: { alignItems: 'center', backgroundColor: zenith.colors.primary, borderRadius: 12, padding: 12 },
+  modifyButtonText: { color: zenith.colors.primaryForeground, fontFamily: zenith.font.bodyBold },
   actions: { gap: 10 },
-  acceptButton: { alignItems: 'center', backgroundColor: '#22c55e', borderRadius: 12, padding: 12 },
-  acceptText: { color: '#052e16', fontWeight: '900' },
-  rejectButton: { alignItems: 'center', borderColor: '#475569', borderRadius: 12, borderWidth: 1, padding: 12 },
-  rejectText: { color: '#cbd5e1', fontWeight: '900' },
+  acceptButton: { alignItems: 'center', backgroundColor: zenith.colors.primary, borderRadius: 12, padding: 12 },
+  acceptText: { color: zenith.colors.primaryForeground, fontFamily: zenith.font.bodyBold },
+  rejectButton: { alignItems: 'center', borderColor: zenith.colors.border, borderRadius: 12, borderWidth: 1, padding: 12 },
+  rejectText: { color: zenith.colors.muted, fontFamily: zenith.font.bodyBold },
   disabled: { opacity: 0.55 },
-  notice: { color: '#86efac', fontWeight: '800' },
-  error: { color: '#f87171' },
-  empty: { backgroundColor: '#0f172a', borderRadius: 16, color: '#cbd5e1', padding: 16 },
+  empty: { backgroundColor: zenith.colors.card, borderColor: zenith.colors.border, borderRadius: 16, borderWidth: 1, color: zenith.colors.muted, fontFamily: zenith.font.body, padding: 16 },
 });

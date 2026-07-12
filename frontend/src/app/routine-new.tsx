@@ -6,8 +6,10 @@ import { createRoutine, Exercise, getExercises } from '@/api/client';
 import { ExerciseSelector } from '@/components/ExerciseSelector';
 import { Field } from '@/components/Field';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { Screen } from '@/components/Screen';
 import { SegmentedField } from '@/components/SegmentedField';
+import { ZenithCard, ZenithHeader, ZenithNotice } from '@/components/ZenithUI';
+import { ZenithScreen } from '@/components/ZenithScreen';
+import { zenith } from '@/constants/zenithTheme';
 import { buildRoutineExercises, newRoutineExerciseRow, RoutineExerciseRow } from '@/utils/routineForm';
 
 export default function NewRoutineScreen() {
@@ -76,16 +78,16 @@ export default function NewRoutineScreen() {
   }
 
   return (
-    <Screen>
-      <Text style={styles.title}>Nueva rutina</Text>
+    <ZenithScreen>
+      <ZenithHeader title="Nueva rutina" subtitle="Plan activo" />
       <Field label="Nombre" onChangeText={setName} value={name} />
       <Field label="Objetivo opcional" onChangeText={setGoal} value={goal} />
       <Field label="Descripcion opcional" multiline onChangeText={setDescription} value={description} />
       <Text style={styles.section}>Ejercicios planificados</Text>
-      {loading && <Text style={styles.empty}>Cargando ejercicios...</Text>}
-      {!loading && exercises.length === 0 && <Text style={styles.empty}>No hay ejercicios disponibles para crear la rutina.</Text>}
+      {loading && <ZenithNotice>Cargando ejercicios...</ZenithNotice>}
+      {!loading && exercises.length === 0 && <ZenithNotice>No hay ejercicios disponibles para crear la rutina.</ZenithNotice>}
       {rows.map((row, index) => (
-        <View key={row.key} style={styles.card}>
+        <ZenithCard key={row.key} style={styles.card}>
           <Text style={styles.cardTitle}>Ejercicio {index + 1}</Text>
           <ExerciseSelector
             exercises={exercises}
@@ -114,27 +116,24 @@ export default function NewRoutineScreen() {
               <Text style={styles.removeText}>Quitar ejercicio</Text>
             </Pressable>
           )}
-        </View>
+        </ZenithCard>
       ))}
       <Pressable onPress={addRow} style={styles.secondaryButton}>
         <Text style={styles.secondaryText}>Anadir ejercicio</Text>
       </Pressable>
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error && <ZenithNotice tone="danger">{error}</ZenithNotice>}
       <PrimaryButton disabled={saving || loading || exercises.length === 0} onPress={submit} title={saving ? 'Creando...' : 'Crear rutina'} />
-    </Screen>
+    </ZenithScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { color: '#f8fafc', fontSize: 34, fontWeight: '900' },
-  section: { color: '#f8fafc', fontSize: 18, fontWeight: '900' },
-  card: { backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: 16, borderWidth: 1, gap: 12, padding: 14 },
-  cardTitle: { color: '#f8fafc', fontSize: 16, fontWeight: '800' },
+  section: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 24, textTransform: 'uppercase' },
+  card: { gap: 12 },
+  cardTitle: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 23, textTransform: 'uppercase' },
   grid: { gap: 12 },
-  secondaryButton: { alignItems: 'center', borderColor: '#38bdf8', borderRadius: 14, borderWidth: 1, padding: 14 },
-  secondaryText: { color: '#7dd3fc', fontWeight: '900' },
-  removeButton: { alignItems: 'center', borderColor: '#ef4444', borderRadius: 12, borderWidth: 1, padding: 10 },
-  removeText: { color: '#fca5a5', fontWeight: '800' },
-  empty: { backgroundColor: '#0f172a', borderRadius: 16, color: '#cbd5e1', padding: 16 },
-  error: { color: '#f87171' },
+  secondaryButton: { alignItems: 'center', borderColor: zenith.colors.primaryBorder, borderRadius: 16, borderWidth: 1, padding: 14 },
+  secondaryText: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold },
+  removeButton: { alignItems: 'center', borderColor: 'rgba(232,64,64,0.35)', borderRadius: 12, borderWidth: 1, padding: 10 },
+  removeText: { color: '#fca5a5', fontFamily: zenith.font.bodyBold },
 });

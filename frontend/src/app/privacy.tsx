@@ -1,44 +1,37 @@
 import { Link } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
-import { Screen } from '@/components/Screen';
+import { ZenithCard, ZenithHeader, ZenithNotice } from '@/components/ZenithUI';
+import { ZenithScreen } from '@/components/ZenithScreen';
+import { zenith } from '@/constants/zenithTheme';
 
 export default function PrivacyScreen() {
   return (
-    <Screen>
-      <Text style={styles.kicker}>Zenith beta</Text>
-      <Text style={styles.title}>Privacidad</Text>
+    <ZenithScreen>
+      <ZenithHeader title="Privacidad" subtitle="Zenith beta" />
       <Text style={styles.text}>Zenith guarda datos de cuenta y entrenamiento para que puedas consultar rutinas, sesiones, estadisticas, rangos y recomendaciones.</Text>
-      <View style={styles.card}>
+      <ZenithCard style={styles.card}>
         <Text style={styles.cardTitle}>Datos que guardamos</Text>
         <Text style={styles.item}>- Email, username y password hasheado.</Text>
         <Text style={styles.item}>- Ejercicios propios, rutinas, sesiones, series, pesos, unidades, RPE/RIR, descansos y notas.</Text>
         <Text style={styles.item}>- Sugerencias IA, planes adaptativos y resumenes post-sesion generados para tu cuenta.</Text>
-      </View>
-      <View style={styles.card}>
+      </ZenithCard>
+      <ZenithCard style={styles.card}>
         <Text style={styles.cardTitle}>IA y datos sensibles</Text>
         <Text style={styles.item}>- La IA usa reglas internas por defecto y no aplica cambios sin aceptacion.</Text>
         <Text style={styles.item}>- Las notas privadas no se envian a la IA.</Text>
         <Text style={styles.item}>- Las limitaciones fisicas pueden ser datos sensibles y solo se usan si confirmas el aviso.</Text>
-      </View>
-      <View style={styles.warningBox}>
-        <Text style={styles.warningTitle}>Beta gratuita</Text>
-        <Text style={styles.warningText}>La eliminacion/exportacion automatica de cuenta queda pendiente. Durante beta, solicita eliminacion o exportacion al responsable del despliegue.</Text>
-      </View>
+      </ZenithCard>
+      <ZenithNotice tone="warning">Beta gratuita: la eliminacion/exportacion automatica de cuenta queda pendiente. Durante beta, solicita eliminacion o exportacion al responsable del despliegue.</ZenithNotice>
       <Link href={'/terms' as never} style={styles.link}>Ver terminos</Link>
-    </Screen>
+    </ZenithScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  kicker: { color: '#38bdf8', fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' },
-  title: { color: '#f8fafc', fontSize: 34, fontWeight: '900' },
-  text: { color: '#cbd5e1', fontSize: 16, lineHeight: 23 },
-  card: { backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: 16, borderWidth: 1, gap: 8, padding: 14 },
-  cardTitle: { color: '#f8fafc', fontSize: 16, fontWeight: '900' },
-  item: { color: '#cbd5e1', lineHeight: 21 },
-  warningBox: { backgroundColor: '#1f1111', borderColor: '#7f1d1d', borderRadius: 16, borderWidth: 1, gap: 8, padding: 14 },
-  warningTitle: { color: '#fecaca', fontWeight: '900' },
-  warningText: { color: '#fca5a5', lineHeight: 21 },
-  link: { color: '#93c5fd', fontWeight: '900' },
+  text: { color: zenith.colors.muted, fontFamily: zenith.font.body, fontSize: 16, lineHeight: 23 },
+  card: { gap: 8 },
+  cardTitle: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 22, lineHeight: 24, textTransform: 'uppercase' },
+  item: { color: zenith.colors.foreground, fontFamily: zenith.font.body, lineHeight: 21 },
+  link: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold },
 });

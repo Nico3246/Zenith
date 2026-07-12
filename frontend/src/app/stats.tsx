@@ -11,7 +11,9 @@ import {
   StatsPeriodFilter,
   StatsWeightUnit,
 } from '@/api/client';
-import { Screen } from '@/components/Screen';
+import { ZenithBottomNav, ZenithHeader, ZenithNotice } from '@/components/ZenithUI';
+import { ZenithScreen } from '@/components/ZenithScreen';
+import { zenith } from '@/constants/zenithTheme';
 import {
   buildStatsChart,
   formatStatsDate,
@@ -169,21 +171,18 @@ export default function StatsScreen() {
   }
 
   return (
-    <Screen>
-      <View style={styles.header}>
-        <Text style={styles.eyebrow}>Progreso</Text>
-        <Text style={styles.title}>Estadisticas</Text>
-        <Text style={styles.subtitle}>Volumen, carga y 1RM estimado por ejercicio, sin mezclar kg y lb.</Text>
-      </View>
+    <ZenithScreen bottomNav={<ZenithBottomNav />}>
+      <ZenithHeader title="Estadisticas" subtitle="Analisis" />
+      <Text style={styles.subtitle}>Volumen, carga y 1RM estimado por ejercicio, sin mezclar kg y lb.</Text>
 
       <FilterGroup label="Periodo" items={PERIODS} value={period} onChange={selectPeriod} />
       <FilterGroup label="Unidad" items={WEIGHT_FILTERS} value={weightFilter} onChange={selectWeightFilter} />
       <FilterGroup label="Detalle" items={GROUP_PERIODS} value={groupPeriod} onChange={selectGroupPeriod} />
 
-      {loading && <Text style={styles.empty}>Cargando estadisticas...</Text>}
-      {error && <Text style={styles.error}>{error}</Text>}
+      {loading && <ZenithNotice>Cargando estadisticas...</ZenithNotice>}
+      {error && <ZenithNotice tone="danger">{error}</ZenithNotice>}
       {!loading && !error && stats.length === 0 && (
-        <Text style={styles.empty}>No hay datos para este periodo. Registra sesiones con ejercicios para ver estadisticas.</Text>
+        <ZenithNotice>No hay datos para este periodo. Registra sesiones con ejercicios para ver estadisticas.</ZenithNotice>
       )}
 
       {!loading && !error && stats.map((item) => {
@@ -223,7 +222,7 @@ export default function StatsScreen() {
           </Pressable>
         );
       })}
-    </Screen>
+    </ZenithScreen>
   );
 }
 
@@ -303,40 +302,36 @@ function MiniBarChart({ bars }: { bars: { label: string; value: number }[] }) {
 }
 
 const styles = StyleSheet.create({
-  header: { gap: 6 },
-  eyebrow: { color: '#38bdf8', fontSize: 12, fontWeight: '900', letterSpacing: 2, textTransform: 'uppercase' },
-  title: { color: '#f8fafc', fontSize: 34, fontWeight: '900' },
-  subtitle: { color: '#94a3b8', fontSize: 15, lineHeight: 22 },
+  subtitle: { color: zenith.colors.muted, fontFamily: zenith.font.body, fontSize: 14, lineHeight: 21 },
   filterSection: { gap: 8 },
-  filterLabel: { color: '#cbd5e1', fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
+  filterLabel: { color: zenith.colors.foreground, fontFamily: zenith.font.mono, fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase' },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  filterButton: { borderColor: '#334155', borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
-  filterButtonActive: { backgroundColor: '#38bdf8', borderColor: '#38bdf8' },
-  filterText: { color: '#cbd5e1', fontWeight: '800' },
-  filterTextActive: { color: '#020617' },
-  card: { backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: 20, borderWidth: 1, gap: 14, padding: 16 },
-  cardExpanded: { borderColor: '#38bdf8' },
+  filterButton: { backgroundColor: zenith.colors.secondary, borderColor: zenith.colors.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
+  filterButtonActive: { backgroundColor: zenith.colors.primary, borderColor: zenith.colors.primary },
+  filterText: { color: zenith.colors.muted, fontFamily: zenith.font.bodyBold, fontSize: 12 },
+  filterTextActive: { color: zenith.colors.primaryForeground },
+  card: { backgroundColor: zenith.colors.card, borderColor: zenith.colors.border, borderRadius: 22, borderWidth: 1, gap: 14, padding: 16 },
+  cardExpanded: { borderColor: zenith.colors.primaryBorder },
   cardHeader: { alignItems: 'flex-start', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
   cardTitleBlock: { flex: 1, gap: 4 },
-  name: { color: '#f8fafc', fontSize: 19, fontWeight: '900' },
-  meta: { color: '#94a3b8', fontSize: 13 },
-  expand: { color: '#38bdf8', fontSize: 13, fontWeight: '900' },
+  name: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 24, lineHeight: 26, textTransform: 'uppercase' },
+  meta: { color: zenith.colors.muted, fontFamily: zenith.font.body, fontSize: 12 },
+  expand: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold, fontSize: 12 },
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  metric: { backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: 14, borderWidth: 1, minWidth: '30%', padding: 10 },
-  metricValue: { color: '#f8fafc', fontSize: 16, fontWeight: '900' },
-  metricLabel: { color: '#64748b', fontSize: 12, fontWeight: '800', marginTop: 4 },
-  detail: { borderTopColor: '#1e293b', borderTopWidth: 1, paddingTop: 14 },
+  metric: { backgroundColor: zenith.colors.background, borderColor: zenith.colors.border, borderRadius: 14, borderWidth: 1, minWidth: '30%', padding: 10 },
+  metricValue: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 20, lineHeight: 22 },
+  metricLabel: { color: zenith.colors.muted, fontFamily: zenith.font.mono, fontSize: 10, marginTop: 4 },
+  detail: { borderTopColor: zenith.colors.border, borderTopWidth: 1, paddingTop: 14 },
   detailContent: { gap: 12 },
-  detailText: { color: '#cbd5e1' },
-  chartTitle: { color: '#cbd5e1', fontWeight: '900' },
-  chart: { alignItems: 'flex-end', backgroundColor: '#020617', borderRadius: 16, flexDirection: 'row', gap: 6, minHeight: 130, padding: 12 },
+  detailText: { color: zenith.colors.foreground, fontFamily: zenith.font.body },
+  chartTitle: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold },
+  chart: { alignItems: 'flex-end', backgroundColor: zenith.colors.background, borderRadius: 16, flexDirection: 'row', gap: 6, minHeight: 130, padding: 12 },
   barSlot: { alignItems: 'center', flex: 1, gap: 6, justifyContent: 'flex-end' },
-  bar: { backgroundColor: '#38bdf8', borderRadius: 999, width: '100%' },
-  barLabel: { color: '#64748b', fontSize: 9, fontWeight: '700' },
+  bar: { backgroundColor: zenith.colors.primary, borderRadius: 999, width: '100%' },
+  barLabel: { color: zenith.colors.muted, fontFamily: zenith.font.mono, fontSize: 9 },
   pointsList: { gap: 8 },
   pointRow: { alignItems: 'center', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
-  pointDate: { color: '#94a3b8', fontWeight: '800' },
-  pointValue: { color: '#e2e8f0', flex: 1, textAlign: 'right' },
-  empty: { backgroundColor: '#0f172a', borderRadius: 16, color: '#cbd5e1', padding: 16 },
-  error: { color: '#f87171' },
+  pointDate: { color: zenith.colors.muted, fontFamily: zenith.font.bodyBold },
+  pointValue: { color: zenith.colors.foreground, flex: 1, fontFamily: zenith.font.body, textAlign: 'right' },
+  error: { color: zenith.colors.danger, fontFamily: zenith.font.body },
 });

@@ -1,11 +1,13 @@
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { login } from '@/api/client';
 import { Field } from '@/components/Field';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { Screen } from '@/components/Screen';
+import { ZenithCard, ZenithHeader, ZenithLogo, ZenithNotice } from '@/components/ZenithUI';
+import { ZenithScreen } from '@/components/ZenithScreen';
+import { zenith } from '@/constants/zenithTheme';
 import { loginErrorMessage, SESSION_EXPIRED_NOTICE } from '@/utils/authDisplay';
 
 export default function LoginScreen() {
@@ -35,41 +37,42 @@ export default function LoginScreen() {
   }
 
   return (
-    <Screen>
-      <Text style={styles.title}>Entrar</Text>
-      {sessionNotice && <Text style={styles.notice}>{sessionNotice}</Text>}
-      <Field autoCapitalize="none" keyboardType="email-address" label="Email" onChangeText={setEmail} value={email} />
-      <Field label="Password" onChangeText={setPassword} secureTextEntry value={password} />
-      {error && <Text style={styles.error}>{error}</Text>}
-      <PrimaryButton disabled={loading} onPress={submit} title={loading ? 'Entrando...' : 'Iniciar sesion'} />
-      <Text style={styles.legalText}>Al usar Zenith aceptas el aviso medico de beta, privacidad y terminos.</Text>
-      <Link href={'/privacy' as never} style={styles.link}>Privacidad</Link>
-      <Link href={'/terms' as never} style={styles.link}>Terminos</Link>
-    </Screen>
+    <ZenithScreen>
+      <ZenithLogo />
+      <ZenithHeader title="Entrar" subtitle="Acceso Zenith" />
+      <Text style={styles.subtitle}>Continua registrando sesiones, rutinas y progreso con IA revisable.</Text>
+      {sessionNotice && <ZenithNotice tone="warning">{sessionNotice}</ZenithNotice>}
+      <ZenithCard style={styles.card}>
+        <Field autoCapitalize="none" keyboardType="email-address" label="Email" onChangeText={setEmail} value={email} />
+        <Field label="Password" onChangeText={setPassword} secureTextEntry value={password} />
+        {error && <ZenithNotice tone="danger">{error}</ZenithNotice>}
+        <PrimaryButton disabled={loading} onPress={submit} title={loading ? 'Entrando...' : 'Iniciar sesion'} />
+      </ZenithCard>
+      <View style={styles.legalCard}>
+        <Text style={styles.legalText}>Al usar Zenith aceptas el aviso medico de beta, privacidad y terminos.</Text>
+        <View style={styles.legalRow}>
+          <Link href={'/privacy' as never} style={styles.link}>Privacidad</Link>
+          <Text style={styles.separator}>/</Text>
+          <Link href={'/terms' as never} style={styles.link}>Terminos</Link>
+        </View>
+      </View>
+    </ZenithScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: {
-    color: '#f8fafc',
-    fontSize: 34,
-    fontWeight: '900',
-  },
-  error: {
-    color: '#f87171',
-  },
-  notice: {
-    backgroundColor: '#082f49',
-    borderRadius: 14,
-    color: '#bae6fd',
-    padding: 12,
-  },
+  subtitle: { color: zenith.colors.muted, fontFamily: zenith.font.body, fontSize: 15, lineHeight: 22 },
+  card: { gap: 14 },
+  legalCard: { backgroundColor: zenith.colors.secondary, borderColor: zenith.colors.border, borderRadius: 16, borderWidth: 1, gap: 10, padding: 14 },
   legalText: {
-    color: '#94a3b8',
+    color: zenith.colors.muted,
+    fontFamily: zenith.font.body,
     lineHeight: 20,
   },
+  legalRow: { alignItems: 'center', flexDirection: 'row', gap: 8 },
   link: {
-    color: '#93c5fd',
-    fontWeight: '900',
+    color: zenith.colors.primary,
+    fontFamily: zenith.font.bodyBold,
   },
+  separator: { color: zenith.colors.muted },
 });

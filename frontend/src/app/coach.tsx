@@ -1,10 +1,12 @@
+import { Check, Sparkles, X, Zap } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { acceptAiSuggestion, AiSuggestion, generateAiSuggestions, getAiSuggestions, rejectAiSuggestion } from '@/api/client';
-import { PrimaryButton } from '@/components/PrimaryButton';
-import { Screen } from '@/components/Screen';
+import { ZenithBottomNav, ZenithButton, ZenithCard, ZenithHeader, ZenithNotice, ZenithPill } from '@/components/ZenithUI';
+import { ZenithScreen } from '@/components/ZenithScreen';
 import { SegmentedField } from '@/components/SegmentedField';
+import { zenith } from '@/constants/zenithTheme';
 import {
   AiSuggestionFilter,
   aiSuggestionChangeSummary,
@@ -104,34 +106,33 @@ export default function CoachScreen() {
   }
 
   return (
-    <Screen>
-      <Text style={styles.kicker}>Entrenador IA</Text>
-      <Text style={styles.title}>Progresion explicable</Text>
+    <ZenithScreen bottomNav={<ZenithBottomNav />}>
+      <ZenithHeader title="Coach IA" subtitle="IA personal" right={<View style={styles.headerIcon}><Sparkles color={zenith.colors.primary} size={15} /></View>} />
       <Text style={styles.subtitle}>IA interna local: no envia datos fuera y no usa notas. Al aceptar, la rutina se actualiza.</Text>
       <View style={styles.warningBox}>
         <Text style={styles.warningTitle}>Aviso medico</Text>
         <Text style={styles.warningText}>No aceptes cambios si hay dolor, lesion, mareo o tecnica peor. Zenith no sustituye consejo medico ni profesional.</Text>
       </View>
-      <PrimaryButton disabled={generating || loading} onPress={submitGenerate} title={generating ? 'Analizando...' : 'Generar sugerencias'} />
+      <ZenithButton disabled={generating || loading} icon={<Zap color={zenith.colors.primaryForeground} fill={zenith.colors.primaryForeground} size={15} />} onPress={submitGenerate} title={generating ? 'Analizando...' : 'Generar sugerencias'} />
       <SegmentedField
         label="Filtro"
         onValueChange={(value) => setFilter(value as AiSuggestionFilter)}
         options={FILTERS.map((item) => ({ label: aiSuggestionFilterLabel(item), value: item }))}
         selectedValue={filter}
       />
-      {loading && <Text style={styles.empty}>Cargando sugerencias...</Text>}
-      {notice && <Text style={styles.notice}>{notice}</Text>}
-      {error && <Text style={styles.error}>{error}</Text>}
-      {!loading && suggestions.length === 0 && <Text style={styles.empty}>No hay sugerencias todavia. Registra varias sesiones y genera un analisis.</Text>}
-      {!loading && suggestions.length > 0 && visibleSuggestions.length === 0 && <Text style={styles.empty}>No hay sugerencias para este filtro.</Text>}
+      {loading && <ZenithNotice>Cargando sugerencias...</ZenithNotice>}
+      {notice && <ZenithNotice tone="success">{notice}</ZenithNotice>}
+      {error && <ZenithNotice tone="danger">{error}</ZenithNotice>}
+      {!loading && suggestions.length === 0 && <ZenithNotice>No hay sugerencias todavia. Registra varias sesiones y genera un analisis.</ZenithNotice>}
+      {!loading && suggestions.length > 0 && visibleSuggestions.length === 0 && <ZenithNotice>No hay sugerencias para este filtro.</ZenithNotice>}
       {visibleSuggestions.map((suggestion) => {
         const isPending = suggestion.status === 'pending';
         const isWorking = working === suggestion.id;
         return (
-          <View key={suggestion.id} style={styles.card}>
+          <ZenithCard key={suggestion.id} style={styles.card}>
             <View style={styles.cardHeader}>
               <Text style={styles.type}>{aiSuggestionTypeLabel(suggestion.type)}</Text>
-              <Text style={[styles.status, isPending ? styles.pending : styles.done]}>{aiSuggestionStatusLabel(suggestion.status)}</Text>
+              <ZenithPill active={isPending}>{aiSuggestionStatusLabel(suggestion.status)}</ZenithPill>
             </View>
             <Text style={styles.recommendation}>{suggestion.recommendation}</Text>
             <Text style={styles.explanation}>{suggestion.explanation}</Text>
@@ -157,49 +158,44 @@ export default function CoachScreen() {
             {isPending && (
               <View style={styles.actions}>
                 <Pressable disabled={isWorking} onPress={() => submitAccept(suggestion.id)} style={[styles.acceptButton, isWorking && styles.disabled]}>
+                  <Check color={zenith.colors.primaryForeground} size={13} />
                   <Text style={styles.acceptText}>{isWorking ? 'Aplicando...' : 'Aceptar y aplicar'}</Text>
                 </Pressable>
                 <Pressable disabled={isWorking} onPress={() => submitReject(suggestion.id)} style={[styles.rejectButton, isWorking && styles.disabled]}>
+                  <X color={zenith.colors.muted} size={13} />
                   <Text style={styles.rejectText}>Rechazar</Text>
                 </Pressable>
               </View>
             )}
-          </View>
+          </ZenithCard>
         );
       })}
-    </Screen>
+    </ZenithScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  kicker: { color: '#a78bfa', fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' },
-  title: { color: '#f8fafc', fontSize: 34, fontWeight: '900' },
-  subtitle: { color: '#cbd5e1', fontSize: 16, lineHeight: 23 },
-  card: { backgroundColor: '#111827', borderColor: '#312e81', borderRadius: 18, borderWidth: 1, gap: 10, padding: 16 },
+  headerIcon: { alignItems: 'center', backgroundColor: zenith.colors.primarySoft, borderRadius: 999, height: 38, justifyContent: 'center', width: 38 },
+  subtitle: { color: zenith.colors.muted, fontFamily: zenith.font.body, fontSize: 14, lineHeight: 22 },
+  card: { borderColor: zenith.colors.border, gap: 10 },
   cardHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  type: { color: '#ddd6fe', fontSize: 16, fontWeight: '900' },
-  status: { borderRadius: 999, fontSize: 12, fontWeight: '900', overflow: 'hidden', paddingHorizontal: 10, paddingVertical: 5 },
-  pending: { backgroundColor: '#422006', color: '#fde68a' },
-  done: { backgroundColor: '#0f172a', color: '#cbd5e1' },
-  recommendation: { color: '#f8fafc', fontSize: 18, fontWeight: '900' },
-  explanation: { color: '#cbd5e1', lineHeight: 22 },
+  type: { color: zenith.colors.foreground, flex: 1, fontFamily: zenith.font.display, fontSize: 22, lineHeight: 24, textTransform: 'uppercase' },
+  recommendation: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold, fontSize: 16 },
+  explanation: { color: zenith.colors.muted, fontFamily: zenith.font.body, lineHeight: 21 },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  metaPill: { backgroundColor: '#1e1b4b', borderRadius: 999, color: '#c4b5fd', fontSize: 12, fontWeight: '900', overflow: 'hidden', paddingHorizontal: 10, paddingVertical: 5 },
-  detailBox: { backgroundColor: '#0f172a', borderRadius: 12, gap: 5, padding: 10 },
-  warningBox: { backgroundColor: '#1f1111', borderColor: '#7f1d1d', borderRadius: 14, borderWidth: 1, gap: 6, padding: 12 },
+  metaPill: { backgroundColor: zenith.colors.secondary, borderRadius: 999, color: zenith.colors.primary, fontFamily: zenith.font.mono, fontSize: 10, overflow: 'hidden', paddingHorizontal: 10, paddingVertical: 5 },
+  detailBox: { backgroundColor: zenith.colors.background, borderRadius: 12, gap: 5, padding: 10 },
+  warningBox: { backgroundColor: zenith.colors.dangerSoft, borderColor: 'rgba(232,64,64,0.28)', borderRadius: 14, borderWidth: 1, gap: 6, padding: 12 },
   warningTitle: { color: '#fecaca', fontWeight: '900' },
   warningText: { color: '#fca5a5', lineHeight: 20 },
-  riskBox: { backgroundColor: '#1f1111', borderColor: '#7f1d1d', borderRadius: 12, borderWidth: 1, gap: 5, padding: 10 },
-  detailTitle: { color: '#bfdbfe', fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
-  detailText: { color: '#dbeafe', lineHeight: 20 },
-  privacy: { color: '#93c5fd', fontSize: 13, fontWeight: '700' },
+  riskBox: { backgroundColor: zenith.colors.dangerSoft, borderColor: 'rgba(232,64,64,0.28)', borderRadius: 12, borderWidth: 1, gap: 5, padding: 10 },
+  detailTitle: { color: zenith.colors.primary, fontFamily: zenith.font.mono, fontSize: 10, textTransform: 'uppercase' },
+  detailText: { color: zenith.colors.foreground, fontFamily: zenith.font.body, lineHeight: 20 },
+  privacy: { color: zenith.colors.cyan, fontFamily: zenith.font.bodyMedium, fontSize: 12 },
   actions: { gap: 10 },
-  acceptButton: { alignItems: 'center', backgroundColor: '#22c55e', borderRadius: 12, padding: 12 },
-  acceptText: { color: '#052e16', fontWeight: '900' },
-  rejectButton: { alignItems: 'center', borderColor: '#475569', borderRadius: 12, borderWidth: 1, padding: 12 },
-  rejectText: { color: '#cbd5e1', fontWeight: '900' },
+  acceptButton: { alignItems: 'center', backgroundColor: zenith.colors.primary, borderRadius: 12, flexDirection: 'row', gap: 7, justifyContent: 'center', padding: 12 },
+  acceptText: { color: zenith.colors.primaryForeground, fontFamily: zenith.font.bodyBold },
+  rejectButton: { alignItems: 'center', borderColor: zenith.colors.border, borderRadius: 12, borderWidth: 1, flexDirection: 'row', gap: 7, justifyContent: 'center', padding: 12 },
+  rejectText: { color: zenith.colors.muted, fontFamily: zenith.font.bodyBold },
   disabled: { opacity: 0.55 },
-  empty: { backgroundColor: '#0f172a', borderRadius: 16, color: '#cbd5e1', padding: 16 },
-  notice: { color: '#86efac', fontWeight: '800' },
-  error: { color: '#f87171' },
 });

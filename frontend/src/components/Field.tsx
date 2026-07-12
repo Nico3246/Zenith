@@ -1,5 +1,7 @@
 import { Text, TextInput, TextInputProps, StyleSheet, View } from 'react-native';
 
+import { zenith } from '@/constants/zenithTheme';
+
 type FieldProps = TextInputProps & {
   label: string;
 };
@@ -13,7 +15,7 @@ export function Field({ label, keyboardType, multiline, returnKeyType, selectTex
       <TextInput
         keyboardType={keyboardType}
         multiline={multiline}
-        placeholderTextColor="#64748b"
+        placeholderTextColor={zenith.colors.muted}
         returnKeyType={returnKeyType ?? (multiline ? 'default' : 'next')}
         selectTextOnFocus={selectTextOnFocus ?? numericKeyboard}
         style={[styles.input, multiline && styles.multiline, style]}
@@ -28,17 +30,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
+    color: zenith.colors.muted,
+    fontFamily: zenith.font.mono,
+    fontSize: 10,
+    letterSpacing: 1.4,
     textTransform: 'uppercase',
   },
   input: {
-    backgroundColor: '#0f172a',
-    borderColor: '#1e293b',
-    borderRadius: 14,
+    backgroundColor: zenith.colors.secondary,
+    borderColor: zenith.colors.border,
+    borderRadius: 16,
     borderWidth: 1,
-    color: '#f8fafc',
+    color: zenith.colors.foreground,
+    fontFamily: zenith.font.body,
     fontSize: 16,
     padding: 14,
   },

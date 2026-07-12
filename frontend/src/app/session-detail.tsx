@@ -1,4 +1,5 @@
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { Bot, Star } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -14,7 +15,9 @@ import {
   Routine,
   WorkoutSession,
 } from '@/api/client';
-import { Screen } from '@/components/Screen';
+import { ZenithButton, ZenithCard, ZenithHeader, ZenithNotice } from '@/components/ZenithUI';
+import { ZenithScreen } from '@/components/ZenithScreen';
+import { zenith } from '@/constants/zenithTheme';
 import { exerciseName, formatVolumeByUnit, routineName } from '@/utils/workoutDisplay';
 
 function paramValue(value: string | string[] | undefined) {
@@ -123,14 +126,14 @@ export default function SessionDetailScreen() {
   }
 
   return (
-    <Screen>
-      <Text style={styles.title}>Detalle sesion</Text>
-      {loading && <Text style={styles.empty}>Cargando sesion...</Text>}
-      {!id && <Text style={styles.error}>Sesion no encontrada.</Text>}
-      {error && <Text style={styles.error}>{error}</Text>}
+    <ZenithScreen>
+      <ZenithHeader title="Detalle sesion" subtitle="Historial" />
+      {loading && <ZenithNotice>Cargando sesion...</ZenithNotice>}
+      {!id && <ZenithNotice tone="danger">Sesion no encontrada.</ZenithNotice>}
+      {error && <ZenithNotice tone="danger">{error}</ZenithNotice>}
       {session && (
         <>
-          <View style={styles.card}>
+          <ZenithCard style={styles.card}>
             <Text style={styles.name}>{new Date(session.started_at).toLocaleString()}</Text>
             <Text style={styles.meta}>Rutina: {routineName(session.routine_id, routines)}</Text>
             <Text style={styles.meta}>Inicio: {session.started_at}</Text>
@@ -143,9 +146,7 @@ export default function SessionDetailScreen() {
               <Text style={styles.summaryTitle}>Resumen IA post-sesion</Text>
               <Text style={styles.summaryHelp}>Genera un analisis revisable. No modifica rutinas ni sesiones.</Text>
               {summaryLoading && <Text style={styles.meta}>Buscando resumen existente...</Text>}
-              <Pressable disabled={summarySaving} onPress={submitGenerateSummary} style={[styles.summaryButton, summarySaving && styles.disabled]}>
-                <Text style={styles.summaryButtonText}>{summarySaving ? 'Generando...' : summary ? 'Regenerar resumen IA' : 'Generar resumen IA'}</Text>
-              </Pressable>
+              <ZenithButton disabled={summarySaving} icon={<Bot color={zenith.colors.primaryForeground} size={14} />} onPress={submitGenerateSummary} title={summarySaving ? 'Generando...' : summary ? 'Regenerar resumen IA' : 'Generar resumen IA'} />
               {summary && (
                 <View style={styles.summaryResult}>
                   <Text style={styles.summaryText}>{summary.summary}</Text>
@@ -168,50 +169,46 @@ export default function SessionDetailScreen() {
                 <Text style={styles.deleteText}>{deleting ? 'Eliminando...' : 'Eliminar sesion'}</Text>
               </Pressable>
             </View>
-          </View>
+          </ZenithCard>
           <Text style={styles.section}>Series</Text>
           {session.sets.map((set) => (
-            <View key={set.id ?? `${set.exercise_id}-${set.set_number}`} style={styles.setCard}>
+            <ZenithCard key={set.id ?? `${set.exercise_id}-${set.set_number}`} style={styles.setCard}>
+              <Star color={zenith.colors.primary} size={14} />
               <Text style={styles.setTitle}>Serie {set.set_number}: {exerciseName(set.exercise_id, exercises)}</Text>
               <Text style={styles.meta}>{set.reps} reps · {formatWeight(set.weight_value, set.weight_unit)}</Text>
               <Text style={styles.meta}>RPE {set.rpe ?? '-'} · RIR {set.rir ?? '-'} · Descanso {set.rest_seconds ?? '-'}s</Text>
               {set.notes && <Text style={styles.notes}>{set.notes}</Text>}
-            </View>
+            </ZenithCard>
           ))}
         </>
       )}
-    </Screen>
+    </ZenithScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { color: '#f8fafc', fontSize: 34, fontWeight: '900' },
-  section: { color: '#f8fafc', fontSize: 20, fontWeight: '900' },
-  card: { backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: 16, borderWidth: 1, gap: 8, padding: 16 },
-  setCard: { backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: 14, borderWidth: 1, gap: 6, padding: 14 },
-  name: { color: '#f8fafc', fontSize: 18, fontWeight: '800' },
-  setTitle: { color: '#f8fafc', fontWeight: '900' },
-  meta: { color: '#94a3b8' },
-  notes: { color: '#cbd5e1', fontStyle: 'italic' },
-  link: { color: '#7dd3fc', fontWeight: '900', marginTop: 4 },
-  summaryBox: { backgroundColor: '#07111f', borderColor: '#1e3a8a', borderRadius: 14, borderWidth: 1, gap: 8, marginTop: 8, padding: 12 },
-  summaryTitle: { color: '#bfdbfe', fontWeight: '900' },
-  summaryHelp: { color: '#cbd5e1', lineHeight: 20 },
-  summaryButton: { alignItems: 'center', backgroundColor: '#38bdf8', borderRadius: 12, padding: 12 },
-  summaryButtonText: { color: '#082f49', fontWeight: '900' },
-  summaryResult: { backgroundColor: '#020617', borderRadius: 12, gap: 8, padding: 10 },
-  summaryText: { color: '#f8fafc', fontWeight: '800', lineHeight: 20 },
+  section: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 24, textTransform: 'uppercase' },
+  card: { gap: 10 },
+  setCard: { flexDirection: 'column', gap: 6 },
+  name: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 26, lineHeight: 28, textTransform: 'uppercase' },
+  setTitle: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold },
+  meta: { color: zenith.colors.muted, fontFamily: zenith.font.body },
+  notes: { color: zenith.colors.foreground, fontFamily: zenith.font.body, fontStyle: 'italic' },
+  link: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold, marginTop: 4 },
+  summaryBox: { backgroundColor: zenith.colors.primarySoft, borderColor: zenith.colors.primaryBorder, borderRadius: 16, borderWidth: 1, gap: 8, marginTop: 8, padding: 12 },
+  summaryTitle: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold },
+  summaryHelp: { color: zenith.colors.foreground, fontFamily: zenith.font.body, lineHeight: 20 },
+  summaryResult: { backgroundColor: zenith.colors.background, borderRadius: 12, gap: 8, padding: 10 },
+  summaryText: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold, lineHeight: 20 },
   summaryGroup: { gap: 4 },
-  summaryGroupTitle: { color: '#93c5fd', fontWeight: '900' },
-  summaryItem: { color: '#cbd5e1', lineHeight: 20 },
+  summaryGroupTitle: { color: zenith.colors.primary, fontFamily: zenith.font.mono, fontSize: 10, textTransform: 'uppercase' },
+  summaryItem: { color: zenith.colors.foreground, fontFamily: zenith.font.body, lineHeight: 20 },
   warningItem: { color: '#fca5a5', lineHeight: 20 },
-  providerText: { color: '#a7f3d0', fontSize: 12, fontWeight: '800' },
-  dangerZone: { backgroundColor: '#1f1111', borderColor: '#7f1d1d', borderRadius: 14, borderWidth: 1, gap: 8, marginTop: 8, padding: 12 },
-  dangerTitle: { color: '#fecaca', fontWeight: '900' },
+  providerText: { color: zenith.colors.cyan, fontFamily: zenith.font.mono, fontSize: 11 },
+  dangerZone: { backgroundColor: zenith.colors.dangerSoft, borderColor: 'rgba(232,64,64,0.35)', borderRadius: 14, borderWidth: 1, gap: 8, marginTop: 8, padding: 12 },
+  dangerTitle: { color: '#fecaca', fontFamily: zenith.font.bodyBold },
   dangerText: { color: '#fca5a5' },
-  deleteButton: { alignItems: 'center', backgroundColor: '#dc2626', borderRadius: 12, padding: 12 },
-  deleteText: { color: '#fff', fontWeight: '900' },
+  deleteButton: { alignItems: 'center', backgroundColor: zenith.colors.danger, borderRadius: 12, padding: 12 },
+  deleteText: { color: '#fff', fontFamily: zenith.font.bodyBold },
   disabled: { opacity: 0.55 },
-  empty: { backgroundColor: '#0f172a', borderRadius: 16, color: '#cbd5e1', padding: 16 },
-  error: { color: '#f87171' },
 });

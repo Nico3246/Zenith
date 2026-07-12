@@ -1,5 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { zenith } from '@/constants/zenithTheme';
+
 type SegmentedOption = {
   label: string;
   value: string;
@@ -36,10 +38,10 @@ export function SegmentedField({ label, options, selectedValue, onValueChange }:
 
 const styles = StyleSheet.create({
   container: { gap: 8 },
-  label: { color: '#cbd5e1', fontSize: 13, fontWeight: '700', textTransform: 'uppercase' },
-  segmented: { backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: 14, borderWidth: 1, flexDirection: 'row', gap: 6, padding: 4 },
+  label: { color: zenith.colors.foreground, fontFamily: zenith.font.mono, fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase' },
+  segmented: { backgroundColor: zenith.colors.background, borderColor: zenith.colors.border, borderRadius: 14, borderWidth: 1, flexDirection: 'row', gap: 6, padding: 4 },
   option: { alignItems: 'center', borderRadius: 10, flex: 1, paddingVertical: 11 },
-  optionSelected: { backgroundColor: '#38bdf8' },
-  optionText: { color: '#cbd5e1', fontWeight: '900' },
-  optionTextSelected: { color: '#020617' },
+  optionSelected: { backgroundColor: zenith.colors.primary },
+  optionText: { color: zenith.colors.muted, fontFamily: zenith.font.bodyBold },
+  optionTextSelected: { color: zenith.colors.primaryForeground },
 });

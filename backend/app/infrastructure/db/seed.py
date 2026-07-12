@@ -37,21 +37,33 @@ def seed_database(db: Session) -> None:
         exercise = db.scalar(
             select(Exercise).where(Exercise.name == data["name"], Exercise.is_global.is_(True))
         )
-        if exercise is not None:
-            continue
-
-        db.add(
-            Exercise(
-                name=data["name"],
-                description=data["description"],
-                difficulty=data["difficulty"],
-                technique_notes=data["technique_notes"],
-                is_global=True,
-                created_by_user_id=None,
-                muscle_groups=[muscle_groups[name] for name in data["muscle_groups"]],
-                equipment=[equipment_items[name] for name in data["equipment"]],
+        for legacy_name in data.get("legacy_names", []):
+            if exercise is not None:
+                break
+            exercise = db.scalar(
+                select(Exercise).where(Exercise.name == legacy_name, Exercise.is_global.is_(True))
             )
-        )
+
+        if exercise is None:
+            db.add(
+                Exercise(
+                    name=data["name"],
+                    description=data["description"],
+                    difficulty=data["difficulty"],
+                    technique_notes=data["technique_notes"],
+                    is_global=True,
+                    created_by_user_id=None,
+                    muscle_groups=[muscle_groups[name] for name in data["muscle_groups"]],
+                    equipment=[equipment_items[name] for name in data["equipment"]],
+                )
+            )
+        else:
+            exercise.name = data["name"]
+            exercise.description = data["description"]
+            exercise.difficulty = data["difficulty"]
+            exercise.technique_notes = data["technique_notes"]
+            exercise.muscle_groups = [muscle_groups[name] for name in data["muscle_groups"]]
+            exercise.equipment = [equipment_items[name] for name in data["equipment"]]
 
     for data in RANKS:
         rank = db.scalar(select(Rank).where(Rank.name == data["name"]))

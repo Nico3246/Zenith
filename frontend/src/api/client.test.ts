@@ -116,6 +116,17 @@ describe('api client auth refresh', () => {
     expect(mocks.state.refreshToken).toBeNull();
   });
 
+  it('calls ranks catalog endpoint', async () => {
+    const ranks = [{ id: 'rank-1', name: 'Bronce', description: 'Inicio', min_score: '0.00', sort_order: 1 }];
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(ranks));
+    vi.stubGlobal('fetch', fetchMock);
+    const client = await loadClient();
+
+    await expect(client.getRanks()).resolves.toEqual(ranks);
+
+    expect(fetchMock).toHaveBeenCalledWith('http://localhost:8000/ranks', expect.objectContaining({ method: 'GET' }));
+  });
+
   it('calls AI coach suggestion endpoints', async () => {
     const suggestion = {
       id: 'suggestion-1',
@@ -213,6 +224,7 @@ describe('api client auth refresh', () => {
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(plan))
       .mockResolvedValueOnce(jsonResponse([plan]))
+      .mockResolvedValueOnce(jsonResponse(plan))
       .mockResolvedValueOnce(jsonResponse({ ...plan, status: 'accepted' }))
       .mockResolvedValueOnce(jsonResponse({ ...plan, status: 'rejected' }))
       .mockResolvedValueOnce(jsonResponse({ ...plan, id: 'plan-2', input_summary: { modified_from_plan_id: 'plan-1' } }));
@@ -230,6 +242,7 @@ describe('api client auth refresh', () => {
       priorities: [],
     })).resolves.toEqual(plan);
     await expect(client.getTrainingPlans()).resolves.toEqual([plan]);
+    await expect(client.getTrainingPlan('plan-1')).resolves.toEqual(plan);
     await expect(client.acceptTrainingPlan('plan-1')).resolves.toEqual({ ...plan, status: 'accepted' });
     await expect(client.rejectTrainingPlan('plan-1')).resolves.toEqual({ ...plan, status: 'rejected' });
     await expect(client.modifyTrainingPlan('plan-1', { instruction: 'Hazlo a 4 dias', sensitive_data_acknowledged: false })).resolves.toEqual({
@@ -240,10 +253,11 @@ describe('api client auth refresh', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(1, 'http://localhost:8000/ai/training-plans/generate', expect.objectContaining({ method: 'POST' }));
     expect(fetchMock).toHaveBeenNthCalledWith(2, 'http://localhost:8000/ai/training-plans', expect.objectContaining({ method: 'GET' }));
-    expect(fetchMock).toHaveBeenNthCalledWith(3, 'http://localhost:8000/ai/training-plans/plan-1/accept', expect.objectContaining({ method: 'POST' }));
-    expect(fetchMock).toHaveBeenNthCalledWith(4, 'http://localhost:8000/ai/training-plans/plan-1/reject', expect.objectContaining({ method: 'POST' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(3, 'http://localhost:8000/ai/training-plans/plan-1', expect.objectContaining({ method: 'GET' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(4, 'http://localhost:8000/ai/training-plans/plan-1/accept', expect.objectContaining({ method: 'POST' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(5, 'http://localhost:8000/ai/training-plans/plan-1/reject', expect.objectContaining({ method: 'POST' }));
     expect(fetchMock).toHaveBeenNthCalledWith(
-      5,
+      6,
       'http://localhost:8000/ai/training-plans/plan-1/modify',
       expect.objectContaining({ method: 'POST', body: JSON.stringify({ instruction: 'Hazlo a 4 dias', sensitive_data_acknowledged: false }) }),
     );

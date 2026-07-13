@@ -1,8 +1,8 @@
 import { RefreshCw, Trophy } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { getRank, RankProgress, recalculateRank } from '@/api/client';
+import { getRank, getRanks, Rank, RankProgress, recalculateRank } from '@/api/client';
 import { ZenithBottomNav, ZenithButton, ZenithCard, ZenithHeader, ZenithNotice } from '@/components/ZenithUI';
 import { ZenithScreen } from '@/components/ZenithScreen';
 import { routineAccents, zenith } from '@/constants/zenithTheme';
@@ -12,6 +12,10 @@ export default function RankScreen() {
   const [rank, setRank] = useState<RankProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showRankScale, setShowRankScale] = useState(false);
+  const [ranks, setRanks] = useState<Rank[]>([]);
+  const [loadingRanks, setLoadingRanks] = useState(false);
+  const [ranksError, setRanksError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -33,6 +37,25 @@ export default function RankScreen() {
       setError(caught instanceof Error ? caught.message : 'No se pudo recalcular el rango.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function toggleRankScale() {
+    const nextVisible = !showRankScale;
+    setShowRankScale(nextVisible);
+    if (!nextVisible || ranks.length > 0 || loadingRanks) {
+      return;
+    }
+
+    setLoadingRanks(true);
+    setRanksError(null);
+    try {
+      const items = await getRanks();
+      setRanks([...items].sort((left, right) => left.sort_order - right.sort_order));
+    } catch (caught) {
+      setRanksError(caught instanceof Error ? caught.message : 'No se pudo cargar la escala de rangos.');
+    } finally {
+      setLoadingRanks(false);
     }
   }
 
@@ -92,6 +115,24 @@ export default function RankScreen() {
           <ZenithCard style={styles.card}>
             <Text style={styles.sectionTitle}>Como se calcula</Text>
             {rankExplanationLines.map((line) => <Text key={line} style={styles.note}>{line}</Text>)}
+            <Pressable onPress={toggleRankScale} style={styles.secondaryAction}>
+              <Text style={styles.secondaryActionText}>{showRankScale ? 'Ocultar escala de rangos' : 'Ver escala de rangos'}</Text>
+            </Pressable>
+            {showRankScale && (
+              <View style={styles.rankScale}>
+                {loadingRanks && <Text style={styles.note}>Cargando escala...</Text>}
+                {ranksError && <Text style={styles.errorText}>{ranksError}</Text>}
+                {!loadingRanks && !ranksError && ranks.map((item) => (
+                  <View key={item.id} style={styles.rankScaleRow}>
+                    <View style={styles.rankScaleHeader}>
+                      <Text style={styles.rankScaleName}>{item.name}</Text>
+                      <Text style={styles.rankScaleScore}>{item.min_score} pts</Text>
+                    </View>
+                    {item.description && <Text style={styles.note}>{item.description}</Text>}
+                  </View>
+                ))}
+              </View>
+            )}
           </ZenithCard>
 
           <ZenithButton disabled={saving} icon={<RefreshCw color={zenith.colors.primaryForeground} size={14} />} onPress={submitRecalculate} title={saving ? 'Recalculando...' : 'Recalcular ahora'} />
@@ -120,6 +161,14 @@ const styles = StyleSheet.create({
   next: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold, fontSize: 13 },
   card: { gap: 12 },
   sectionTitle: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 22, textTransform: 'uppercase' },
+  secondaryAction: { alignSelf: 'flex-start', borderColor: zenith.colors.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
+  secondaryActionText: { color: zenith.colors.muted, fontFamily: zenith.font.bodyBold, fontSize: 12 },
+  rankScale: { borderTopColor: zenith.colors.border, borderTopWidth: 1, gap: 10, paddingTop: 12 },
+  rankScaleRow: { gap: 4 },
+  rankScaleHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  rankScaleName: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold },
+  rankScaleScore: { color: zenith.colors.primary, fontFamily: zenith.font.mono, fontSize: 11 },
+  errorText: { color: zenith.colors.danger, fontFamily: zenith.font.body },
   breakdownItem: { gap: 6 },
   breakdownTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   breakdownLabel: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyMedium, fontSize: 13 },

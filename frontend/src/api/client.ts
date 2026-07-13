@@ -36,7 +36,7 @@ export type User = {
   username: string;
 };
 
-export type Rank = { name: string; description: string | null; min_score: string };
+export type Rank = { id: string; name: string; description: string | null; min_score: string; sort_order: number };
 
 export type RankProgress = {
   rank: Rank;
@@ -645,6 +645,10 @@ export function getRank() {
   return request<RankProgress>('/users/me/rank', { auth: true });
 }
 
+export function getRanks() {
+  return request<Rank[]>('/ranks');
+}
+
 export function recalculateRank() {
   return request<RankProgress>('/users/me/rank/recalculate', { method: 'POST', auth: true });
 }
@@ -739,6 +743,10 @@ export function generateTrainingPlan(payload: AiTrainingPlanGenerateRequest) {
 
 export function getTrainingPlans() {
   return request<AiTrainingPlan[]>('/ai/training-plans', { auth: true });
+}
+
+export function getTrainingPlan(planId: string) {
+  return request<AiTrainingPlan>(`/ai/training-plans/${planId}`, { auth: true });
 }
 
 export function acceptTrainingPlan(planId: string) {

@@ -15,6 +15,7 @@ import {
   generateTrainingPlan,
   getAiSuggestions,
   getRoutines,
+  getTrainingPlan,
   getTrainingPlans,
   getWorkoutSessions,
   modifyTrainingPlan,
@@ -134,6 +135,10 @@ function providerSummary(plan: AiTrainingPlan) {
   return providerInfo(plan.provider, plan.model, plan.fallback_used);
 }
 
+function planDate(value: string | null) {
+  return value ? new Date(value).toLocaleString('es-ES') : 'pendiente';
+}
+
 function routineNameById(routineId: string | null, routines: Routine[]) {
   if (!routineId) {
     return 'Sesion libre';
@@ -168,6 +173,10 @@ export default function CoachScreen() {
   const [working, setWorking] = useState<string | null>(null);
   const [modificationInputs, setModificationInputs] = useState<Record<string, string>>({});
   const [modificationAcks, setModificationAcks] = useState<Record<string, boolean>>({});
+  const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
+  const [planDetails, setPlanDetails] = useState<Record<string, AiTrainingPlan>>({});
+  const [planDetailLoading, setPlanDetailLoading] = useState<string | null>(null);
+  const [planDetailErrors, setPlanDetailErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -381,6 +390,32 @@ export default function CoachScreen() {
     }
   }
 
+  async function togglePlanDetail(planId: string) {
+    if (expandedPlanId === planId) {
+      setExpandedPlanId(null);
+      return;
+    }
+
+    setExpandedPlanId(planId);
+    if (planDetails[planId] || planDetailLoading === planId) {
+      return;
+    }
+
+    setPlanDetailLoading(planId);
+    setPlanDetailErrors((current) => ({ ...current, [planId]: '' }));
+    try {
+      const detail = await getTrainingPlan(planId);
+      setPlanDetails((current) => ({ ...current, [planId]: detail }));
+    } catch (caught) {
+      setPlanDetailErrors((current) => ({
+        ...current,
+        [planId]: caught instanceof Error ? caught.message : 'No se pudo cargar el detalle del plan.',
+      }));
+    } finally {
+      setPlanDetailLoading(null);
+    }
+  }
+
   return (
     <ZenithScreen bottomNav={<ZenithBottomNav />}>
       <ZenithHeader title="Coach IA" subtitle="IA personal" right={<View style={styles.headerIcon}><Sparkles color={zenith.colors.primary} size={15} /></View>} />
@@ -552,6 +587,16 @@ export default function CoachScreen() {
               <Text style={styles.cardText}>{plan.explanation}</Text>
               {modifiedFrom(plan) && <Text style={styles.versionText}>Version modificada de otro plan.</Text>}
               <Text style={styles.providerText}>Proveedor IA: {providerSummary(plan)}</Text>
+              <Pressable onPress={() => togglePlanDetail(plan.id)} style={styles.detailToggle}>
+                <Text style={styles.detailToggleText}>{expandedPlanId === plan.id ? 'Ocultar detalle' : 'Ver detalle'}</Text>
+              </Pressable>
+              {expandedPlanId === plan.id && (
+                <View style={styles.planDetailBox}>
+                  {planDetailLoading === plan.id && <Text style={styles.emptyInline}>Cargando detalle...</Text>}
+                  {planDetailErrors[plan.id] && <Text style={styles.risk}>{planDetailErrors[plan.id]}</Text>}
+                  {planDetails[plan.id] && <PlanTechnicalDetail plan={planDetails[plan.id]} />}
+                </View>
+              )}
               {plan.risk_notes && <Text style={styles.risk}>{plan.risk_notes}</Text>}
               {routinesFromPlan(plan).map((routine, index) => (
                 <View key={`${plan.id}-${index}`} style={styles.routineBox}>
@@ -599,6 +644,20 @@ export default function CoachScreen() {
         </View>
       )}
     </ZenithScreen>
+  );
+}
+
+function PlanTechnicalDetail({ plan }: { plan: AiTrainingPlan }) {
+  return (
+    <View style={styles.planDetailContent}>
+      <Text style={styles.detailTitle}>Detalle tecnico</Text>
+      <Text style={styles.detailText}>Creado: {planDate(plan.created_at)}</Text>
+      <Text style={styles.detailText}>Revisado: {planDate(plan.reviewed_at)}</Text>
+      <Text style={styles.detailText}>Duracion: {plan.days_per_week} dias · {plan.session_duration_minutes} min/sesion</Text>
+      <Text style={styles.detailText}>Equipo: {plan.available_equipment.length > 0 ? plan.available_equipment.join(', ') : 'sin preferencia'}</Text>
+      <Text style={styles.detailText}>Prioridades: {plan.priorities.length > 0 ? plan.priorities.join(', ') : 'sin prioridad concreta'}</Text>
+      <Text style={styles.detailText}>Confianza: {plan.confidence ?? 'no indicada'} · {providerSummary(plan)}</Text>
+    </View>
   );
 }
 
@@ -663,6 +722,10 @@ const styles = StyleSheet.create({
   risk: { color: '#fca5a5', fontFamily: zenith.font.bodyBold, lineHeight: 20 },
   versionText: { color: zenith.colors.violet, fontFamily: zenith.font.bodyBold },
   providerText: { color: zenith.colors.cyan, fontFamily: zenith.font.mono, fontSize: 11 },
+  detailToggle: { alignSelf: 'flex-start', borderColor: zenith.colors.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: 11, paddingVertical: 7 },
+  detailToggleText: { color: zenith.colors.muted, fontFamily: zenith.font.bodyBold, fontSize: 12 },
+  planDetailBox: { backgroundColor: zenith.colors.background, borderColor: zenith.colors.border, borderRadius: 12, borderWidth: 1, gap: 6, padding: 10 },
+  planDetailContent: { gap: 5 },
   routineBox: { backgroundColor: zenith.colors.background, borderRadius: 12, gap: 4, padding: 10 },
   routineTitle: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold },
   exerciseLine: { color: zenith.colors.foreground, fontFamily: zenith.font.body, fontSize: 13, lineHeight: 19 },

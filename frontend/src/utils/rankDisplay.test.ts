@@ -8,7 +8,7 @@ describe('rankDisplay', () => {
   });
 
   it('formats next rank progress', () => {
-    expect(formatNextRank({ next_rank: { name: 'Intermedio', description: null, min_score: '300' }, points_to_next_rank: '42.00' })).toBe('Siguiente: Intermedio · faltan 42.00 pts');
+    expect(formatNextRank({ next_rank: { id: 'rank-2', name: 'Intermedio', description: null, min_score: '300', sort_order: 2 }, points_to_next_rank: '42.00' })).toBe('Siguiente: Intermedio · faltan 42.00 pts');
   });
 
   it('formats max rank state', () => {

@@ -1,6 +1,7 @@
 import { Activity, Clock, Layers, Star, TrendingUp } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 
 import {
   ExerciseStats,
@@ -370,13 +371,19 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 function StatsDetail({ metric, onMetricChange, points, unit }: { metric: StatsChartMetric; onMetricChange: (metric: StatsChartMetric) => void; points: ExerciseStatsPoint[]; unit: string | null }) {
   const chart = buildMetricStatsChart(points, metric);
-  const hasMetricData = chart.bars.some((bar) => bar.value > 0);
+  const progressionPoints = chart.bars.filter((bar) => bar.value > 0);
+  const hasMetricData = progressionPoints.length > 0;
   const visiblePoints = points.slice(-6).reverse();
   return (
     <View style={styles.detailContent}>
       <FilterGroup label="Metrica" items={CHART_METRICS} value={metric} onChange={onMetricChange} />
-      <Text style={styles.chartTitle}>{chart.label}</Text>
-      {hasMetricData ? <MiniBarChart bars={chart.bars} /> : <Text style={styles.detailText}>No hay datos de esta metrica para este ejercicio.</Text>}
+      <Text style={styles.chartTitle}>Progresion · {chart.label}</Text>
+      {hasMetricData ? (
+        <>
+          <LineProgressChart points={progressionPoints} />
+          <ProgressSummary points={progressionPoints} unit={unit} />
+        </>
+      ) : <Text style={styles.detailText}>No hay datos de esta metrica para este ejercicio.</Text>}
       <View style={styles.pointsList}>
         {visiblePoints.map((point) => (
           <View key={`${point.period_start}-${point.weight_unit ?? 'bodyweight'}`} style={styles.pointRow}>
@@ -387,6 +394,65 @@ function StatsDetail({ metric, onMetricChange, points, unit }: { metric: StatsCh
       </View>
     </View>
   );
+}
+
+function LineProgressChart({ points }: { points: { label: string; value: number }[] }) {
+  const width = 320;
+  const height = 150;
+  const paddingX = 22;
+  const paddingTop = 18;
+  const paddingBottom = 28;
+  const values = points.map((point) => point.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const chartWidth = width - paddingX * 2;
+  const chartHeight = height - paddingTop - paddingBottom;
+  const coordinates = points.map((point, index) => {
+    const x = paddingX + (points.length === 1 ? chartWidth / 2 : (index / (points.length - 1)) * chartWidth);
+    const y = paddingTop + chartHeight - ((point.value - min) / range) * chartHeight;
+    return { ...point, x, y };
+  });
+  const pathPoints = coordinates.map((point) => `${point.x},${point.y}`).join(' ');
+  const first = coordinates[0];
+  const last = coordinates[coordinates.length - 1];
+
+  return (
+    <View style={styles.lineChartBox}>
+      <Svg height={height} viewBox={`0 0 ${width} ${height}`} width="100%">
+        <Line stroke="rgba(255,255,255,0.08)" strokeWidth="1" x1={paddingX} x2={width - paddingX} y1={paddingTop} y2={paddingTop} />
+        <Line stroke="rgba(255,255,255,0.08)" strokeWidth="1" x1={paddingX} x2={width - paddingX} y1={paddingTop + chartHeight / 2} y2={paddingTop + chartHeight / 2} />
+        <Line stroke="rgba(255,255,255,0.08)" strokeWidth="1" x1={paddingX} x2={width - paddingX} y1={paddingTop + chartHeight} y2={paddingTop + chartHeight} />
+        {coordinates.length > 1 && <Polyline fill="none" points={pathPoints} stroke={zenith.colors.primary} strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />}
+        {coordinates.map((point, index) => (
+          <Circle key={`${point.label}-${index}`} cx={point.x} cy={point.y} fill={index === coordinates.length - 1 ? zenith.colors.primary : zenith.colors.card} r="5" stroke={zenith.colors.primary} strokeWidth="3" />
+        ))}
+        {first && <SvgText fill={zenith.colors.muted} fontSize="10" textAnchor="start" x={paddingX} y={height - 8}>{first.label}</SvgText>}
+        {last && <SvgText fill={zenith.colors.muted} fontSize="10" textAnchor="end" x={width - paddingX} y={height - 8}>{last.label}</SvgText>}
+      </Svg>
+      {points.length === 1 && <Text style={styles.progressHint}>Necesitas mas sesiones para ver progresion.</Text>}
+    </View>
+  );
+}
+
+function ProgressSummary({ points, unit }: { points: { label: string; value: number }[]; unit: string | null }) {
+  const first = points[0];
+  const last = points[points.length - 1];
+  const change = last.value - first.value;
+  const percent = first.value > 0 ? (change / first.value) * 100 : null;
+  const sign = change > 0 ? '+' : '';
+  return (
+    <View style={styles.progressSummary}>
+      <Metric label="Inicial" value={formatProgressValue(first.value, unit)} />
+      <Metric label="Actual" value={formatProgressValue(last.value, unit)} />
+      <Metric label="Cambio" value={`${sign}${formatProgressValue(change, unit)}`} />
+      <Metric label="%" value={percent === null ? 'N/D' : `${sign}${percent.toFixed(1)}%`} />
+    </View>
+  );
+}
+
+function formatProgressValue(value: number, unit: string | null) {
+  return formatStatsValue(String(Number(value.toFixed(2))), unit);
 }
 
 function MiniBarChart({ bars }: { bars: { label: string; value: number }[] }) {
@@ -466,6 +532,9 @@ const styles = StyleSheet.create({
   detailContent: { gap: 12 },
   detailText: { color: zenith.colors.foreground, fontFamily: zenith.font.body },
   chartTitle: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold },
+  lineChartBox: { backgroundColor: zenith.colors.background, borderColor: zenith.colors.border, borderRadius: 16, borderWidth: 1, gap: 8, padding: 10 },
+  progressHint: { color: zenith.colors.muted, fontFamily: zenith.font.body, fontSize: 12, textAlign: 'center' },
+  progressSummary: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   chart: { alignItems: 'flex-end', backgroundColor: zenith.colors.background, borderRadius: 16, flexDirection: 'row', gap: 6, minHeight: 130, padding: 12 },
   barSlot: { alignItems: 'center', flex: 1, gap: 6, justifyContent: 'flex-end' },
   bar: { backgroundColor: zenith.colors.primary, borderRadius: 999, width: '100%' },

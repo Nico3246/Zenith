@@ -1,5 +1,7 @@
 import { ExerciseStats, ExerciseStatsPoint, StatsWeightUnit } from '@/api/client';
 
+export type StatsChartMetric = 'estimated_1rm' | 'max_weight' | 'volume';
+
 export function statsKey(item: ExerciseStats) {
   return `${item.exercise_id}-${item.weight_unit ?? 'bodyweight'}`;
 }
@@ -61,4 +63,38 @@ export function buildStatsChart(points: ExerciseStatsPoint[]) {
       value: hasVolume ? numeric(point.total_volume) : point.total_reps,
     })),
   };
+}
+
+export function buildMetricStatsChart(points: ExerciseStatsPoint[], metric: StatsChartMetric) {
+  const labels: Record<StatsChartMetric, string> = {
+    estimated_1rm: '1RM estimado',
+    max_weight: 'Peso maximo',
+    volume: 'Volumen total',
+  };
+  const valueForPoint = (point: ExerciseStatsPoint) => {
+    if (metric === 'estimated_1rm') {
+      return numeric(point.best_estimated_1rm);
+    }
+    if (metric === 'max_weight') {
+      return numeric(point.max_weight);
+    }
+    return numeric(point.total_volume);
+  };
+  return {
+    label: labels[metric],
+    bars: points.map((point) => ({
+      label: shortStatsDate(point.period_start),
+      value: valueForPoint(point),
+    })),
+  };
+}
+
+export function formatMetricStatsPoint(point: ExerciseStatsPoint, metric: StatsChartMetric, unit: string | null) {
+  if (metric === 'estimated_1rm') {
+    return `1RM ${formatStatsValue(point.best_estimated_1rm, unit)}`;
+  }
+  if (metric === 'max_weight') {
+    return `Peso ${formatStatsValue(point.max_weight, unit)}`;
+  }
+  return `Vol ${formatStatsValue(point.total_volume, unit)}`;
 }

@@ -3,7 +3,7 @@ import { Bot, Play, Plus } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { analyzeRoutineGoal, AuthExpiredError, Exercise, getExercises, getRoutines, Routine } from '@/api/client';
+import { analyzeRoutineGoal, AuthExpiredError, deleteRoutine, Exercise, getExercises, getRoutines, Routine } from '@/api/client';
 import { ZenithBottomNav, ZenithCard, ZenithHeader, ZenithIconButton, ZenithNotice, ZenithPill } from '@/components/ZenithUI';
 import { ZenithScreen } from '@/components/ZenithScreen';
 import { routineAccents, zenith } from '@/constants/zenithTheme';
@@ -31,6 +31,8 @@ export default function RoutinesScreen() {
   const [loadingRoutines, setLoadingRoutines] = useState(true);
   const [loadingExercises, setLoadingExercises] = useState(true);
   const [workingRoutine, setWorkingRoutine] = useState<string | null>(null);
+  const [deletingRoutine, setDeletingRoutine] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -94,6 +96,30 @@ export default function RoutinesScreen() {
       }
     } finally {
       setWorkingRoutine(null);
+    }
+  }
+
+  async function submitDeleteRoutine(routineId: string) {
+    if (deleteConfirm !== routineId) {
+      setDeleteConfirm(routineId);
+      setActionNotice(null);
+      return;
+    }
+
+    setDeletingRoutine(routineId);
+    setRoutinesError(null);
+    setActionNotice(null);
+    try {
+      await deleteRoutine(routineId);
+      setRoutines((current) => current.filter((routine) => routine.id !== routineId));
+      setDeleteConfirm(null);
+      setActionNotice('Rutina eliminada. Las sesiones historicas se conservaron.');
+    } catch (caught) {
+      if (!(caught instanceof AuthExpiredError)) {
+        setRoutinesError(caught instanceof Error ? caught.message : 'No se pudo eliminar la rutina.');
+      }
+    } finally {
+      setDeletingRoutine(null);
     }
   }
 
@@ -169,7 +195,11 @@ export default function RoutinesScreen() {
                 <Text style={styles.aiText}>{workingRoutine === routine.id ? 'Analizando...' : 'IA'}</Text>
               </Pressable>
               <Link href={{ pathname: '/routine-edit', params: { routineId: routine.id } }} style={styles.edit}>Editar</Link>
+              <Pressable disabled={deletingRoutine === routine.id} onPress={() => submitDeleteRoutine(routine.id)} style={[styles.deleteButton, deletingRoutine === routine.id && styles.disabled]}>
+                <Text style={styles.deleteText}>{deletingRoutine === routine.id ? 'Eliminando...' : deleteConfirm === routine.id ? 'Confirmar' : 'Eliminar'}</Text>
+              </Pressable>
             </View>
+            {deleteConfirm === routine.id && <Text style={styles.deleteHint}>Pulsa Confirmar para ocultar esta rutina.</Text>}
           </ZenithCard>
         );
       })}
@@ -201,6 +231,9 @@ const styles = StyleSheet.create({
   aiButton: { alignItems: 'center', borderColor: zenith.colors.primaryBorder, borderRadius: 13, borderWidth: 1, flexDirection: 'row', gap: 6, paddingHorizontal: 13, paddingVertical: 10 },
   aiText: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold, fontSize: 12 },
   edit: { borderColor: zenith.colors.border, borderRadius: 13, borderWidth: 1, color: zenith.colors.muted, fontFamily: zenith.font.bodyBold, overflow: 'hidden', paddingHorizontal: 14, paddingVertical: 10 },
+  deleteButton: { alignItems: 'center', borderColor: 'rgba(232,64,64,0.35)', borderRadius: 13, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 10 },
+  deleteText: { color: '#fca5a5', fontFamily: zenith.font.bodyBold, fontSize: 12 },
+  deleteHint: { color: '#fca5a5', fontFamily: zenith.font.body, fontSize: 12 },
   errorBox: { backgroundColor: zenith.colors.dangerSoft, borderColor: 'rgba(232,64,64,0.28)', borderRadius: 14, borderWidth: 1, gap: 10, padding: 12 },
   errorText: { color: '#ffb4b4', fontFamily: zenith.font.bodyMedium, lineHeight: 20 },
   retryButton: { alignItems: 'center', borderColor: 'rgba(232,64,64,0.35)', borderRadius: 12, borderWidth: 1, padding: 10 },

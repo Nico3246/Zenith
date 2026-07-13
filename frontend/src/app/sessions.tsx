@@ -1,9 +1,9 @@
 import { Link, useLocalSearchParams } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Exercise, getExercises, getRoutines, getWorkoutSessions, Routine, WorkoutSession } from '@/api/client';
+import { deleteWorkoutSession, Exercise, getExercises, getRoutines, getWorkoutSessions, Routine, WorkoutSession } from '@/api/client';
 import { ZenithCard, ZenithHeader, ZenithIconButton, ZenithNotice, ZenithPill } from '@/components/ZenithUI';
 import { ZenithScreen } from '@/components/ZenithScreen';
 import { routineAccents, zenith } from '@/constants/zenithTheme';
@@ -15,6 +15,9 @@ export default function SessionsScreen() {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deletingSession, setDeletingSession] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,10 +33,33 @@ export default function SessionsScreen() {
 
   const noticeText = notice === 'created' ? 'Sesion registrada.' : notice === 'updated' ? 'Sesion guardada.' : notice === 'deleted' ? 'Sesion eliminada.' : null;
 
+  async function submitDeleteSession(sessionId: string) {
+    if (deleteConfirm !== sessionId) {
+      setDeleteConfirm(sessionId);
+      setActionNotice(null);
+      return;
+    }
+
+    setDeletingSession(sessionId);
+    setError(null);
+    setActionNotice(null);
+    try {
+      await deleteWorkoutSession(sessionId);
+      setSessions((current) => current.filter((session) => session.id !== sessionId));
+      setDeleteConfirm(null);
+      setActionNotice('Sesion eliminada. Ya no contara para estadisticas ni rango.');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'No se pudo eliminar la sesion.');
+    } finally {
+      setDeletingSession(null);
+    }
+  }
+
   return (
     <ZenithScreen>
       <ZenithHeader title="Sesiones" subtitle="Entrenamiento" right={<ZenithIconButton href="/session-new"><Plus color={zenith.colors.primary} size={17} /></ZenithIconButton>} />
       {noticeText && <ZenithNotice tone="success">{noticeText}</ZenithNotice>}
+      {actionNotice && <ZenithNotice tone="success">{actionNotice}</ZenithNotice>}
       {loading && <ZenithNotice>Cargando rutinas y sesiones...</ZenithNotice>}
       {error && <ZenithNotice tone="danger">{error}</ZenithNotice>}
 
@@ -66,7 +92,11 @@ export default function SessionsScreen() {
           <View style={styles.actionsRow}>
             <Link href={{ pathname: '/session-detail', params: { sessionId: session.id } }} style={styles.link}>Ver detalle</Link>
             <Link href={{ pathname: '/session-edit', params: { sessionId: session.id } }} style={styles.link}>Editar</Link>
+            <Pressable disabled={deletingSession === session.id} onPress={() => submitDeleteSession(session.id)} style={[styles.deleteButton, deletingSession === session.id && styles.disabled]}>
+              <Text style={styles.deleteText}>{deletingSession === session.id ? 'Eliminando...' : deleteConfirm === session.id ? 'Confirmar' : 'Eliminar'}</Text>
+            </Pressable>
           </View>
+          {deleteConfirm === session.id && <Text style={styles.deleteHint}>Pulsa Confirmar para ocultar esta sesion.</Text>}
         </ZenithCard>
       ))}
     </ZenithScreen>
@@ -82,6 +112,10 @@ const styles = StyleSheet.create({
   name: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 24, lineHeight: 26, textTransform: 'uppercase' },
   meta: { color: zenith.colors.muted, fontFamily: zenith.font.body },
   exercises: { color: zenith.colors.foreground, fontFamily: zenith.font.bodyBold },
-  actionsRow: { flexDirection: 'row', gap: 16, marginTop: 4 },
+  actionsRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 4 },
   link: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold },
+  deleteButton: { borderColor: 'rgba(232,64,64,0.35)', borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 7 },
+  deleteText: { color: '#fca5a5', fontFamily: zenith.font.bodyBold },
+  deleteHint: { color: '#fca5a5', fontFamily: zenith.font.body, fontSize: 12 },
+  disabled: { opacity: 0.55 },
 });

@@ -18,13 +18,14 @@ import { ZenithBottomNav, ZenithCard, ZenithHeader, ZenithNotice, ZenithPill } f
 import { ZenithScreen } from '@/components/ZenithScreen';
 import { zenith } from '@/constants/zenithTheme';
 import {
-  buildStatsChart,
+  buildMetricStatsChart,
   formatStatsDate,
   formatStatsDateRange,
-  formatStatsPoint,
+  formatMetricStatsPoint,
   formatStatsUnit,
   formatStatsValue,
   isStatsWeightUnit,
+  StatsChartMetric,
   statsKey,
 } from '@/utils/statsDisplay';
 
@@ -49,6 +50,12 @@ const GROUP_PERIODS: { label: string; value: StatsGroupingPeriod }[] = [
   { label: 'Mes', value: 'month' },
 ];
 
+const CHART_METRICS: { label: string; value: StatsChartMetric }[] = [
+  { label: '1RM', value: 'estimated_1rm' },
+  { label: 'Peso', value: 'max_weight' },
+  { label: 'Volumen', value: 'volume' },
+];
+
 export default function StatsScreen() {
   const [period, setPeriod] = useState<StatsPeriodFilter>('30d');
   const [weightFilter, setWeightFilter] = useState<WeightFilter>('all');
@@ -61,6 +68,7 @@ export default function StatsScreen() {
   const [detail, setDetail] = useState<ExerciseStatsDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [chartMetrics, setChartMetrics] = useState<Record<string, StatsChartMetric>>({});
 
   useEffect(() => {
     let active = true;
@@ -180,6 +188,10 @@ export default function StatsScreen() {
     setExpandedKey(key);
   }
 
+  function selectChartMetric(key: string, metric: StatsChartMetric) {
+    setChartMetrics((current) => ({ ...current, [key]: metric }));
+  }
+
   return (
     <ZenithScreen bottomNav={<ZenithBottomNav />}>
       <ZenithHeader title="Estadisticas" subtitle="Analisis" />
@@ -200,13 +212,15 @@ export default function StatsScreen() {
         const key = statsKey(item);
         const expanded = expandedKey === key;
         return (
-          <Pressable key={key} onPress={() => toggleItem(item)} style={[styles.card, expanded && styles.cardExpanded]}>
+          <View key={key} style={[styles.card, expanded && styles.cardExpanded]}>
             <View style={styles.cardHeader}>
               <View style={styles.cardTitleBlock}>
                 <Text style={styles.name}>{item.exercise_name}</Text>
                 <Text style={styles.meta}>{formatStatsUnit(item.weight_unit)} · {formatStatsDateRange(item)}</Text>
               </View>
-              <Text style={styles.expand}>{expanded ? 'Cerrar' : 'Detalle'}</Text>
+              <Pressable onPress={() => toggleItem(item)} style={styles.expandButton}>
+                <Text style={styles.expand}>{expanded ? 'Cerrar' : 'Detalle'}</Text>
+              </Pressable>
             </View>
 
             <View style={styles.metricGrid}>
@@ -226,11 +240,16 @@ export default function StatsScreen() {
                   <Text style={styles.detailText}>No hay puntos para este filtro.</Text>
                 )}
                 {!detailLoading && !detailError && detail && detail.points.length > 0 && (
-                  <StatsDetail points={detail.points} unit={item.weight_unit} />
+                  <StatsDetail
+                    metric={chartMetrics[key] ?? 'estimated_1rm'}
+                    onMetricChange={(metric) => selectChartMetric(key, metric)}
+                    points={detail.points}
+                    unit={item.weight_unit}
+                  />
                 )}
               </View>
             )}
-          </Pressable>
+          </View>
         );
       })}
     </ZenithScreen>
@@ -349,18 +368,20 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StatsDetail({ points, unit }: { points: ExerciseStatsPoint[]; unit: string | null }) {
-  const chart = buildStatsChart(points);
+function StatsDetail({ metric, onMetricChange, points, unit }: { metric: StatsChartMetric; onMetricChange: (metric: StatsChartMetric) => void; points: ExerciseStatsPoint[]; unit: string | null }) {
+  const chart = buildMetricStatsChart(points, metric);
+  const hasMetricData = chart.bars.some((bar) => bar.value > 0);
   const visiblePoints = points.slice(-6).reverse();
   return (
     <View style={styles.detailContent}>
+      <FilterGroup label="Metrica" items={CHART_METRICS} value={metric} onChange={onMetricChange} />
       <Text style={styles.chartTitle}>{chart.label}</Text>
-      <MiniBarChart bars={chart.bars} />
+      {hasMetricData ? <MiniBarChart bars={chart.bars} /> : <Text style={styles.detailText}>No hay datos de esta metrica para este ejercicio.</Text>}
       <View style={styles.pointsList}>
         {visiblePoints.map((point) => (
           <View key={`${point.period_start}-${point.weight_unit ?? 'bodyweight'}`} style={styles.pointRow}>
             <Text style={styles.pointDate}>{formatStatsDate(point.period_start)}</Text>
-            <Text style={styles.pointValue}>{formatStatsPoint(point, unit)}</Text>
+            <Text style={styles.pointValue}>{formatMetricStatsPoint(point, metric, unit)}</Text>
           </View>
         ))}
       </View>
@@ -435,6 +456,7 @@ const styles = StyleSheet.create({
   cardTitleBlock: { flex: 1, gap: 4 },
   name: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 24, lineHeight: 26, textTransform: 'uppercase' },
   meta: { color: zenith.colors.muted, fontFamily: zenith.font.body, fontSize: 12 },
+  expandButton: { borderColor: zenith.colors.primaryBorder, borderRadius: 999, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 7 },
   expand: { color: zenith.colors.primary, fontFamily: zenith.font.bodyBold, fontSize: 12 },
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   metric: { backgroundColor: zenith.colors.background, borderColor: zenith.colors.border, borderRadius: 14, borderWidth: 1, minWidth: '30%', padding: 10 },

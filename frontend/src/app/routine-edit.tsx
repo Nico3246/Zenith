@@ -16,6 +16,7 @@ import {
   routineExerciseToRow,
   RoutineExerciseRow,
 } from '@/utils/routineForm';
+import { plannedRoutineExercises } from '@/utils/workoutDisplay';
 
 function paramValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -46,7 +47,7 @@ export default function EditRoutineScreen() {
         setName(routine.name);
         setGoal(routine.goal ?? '');
         setDescription(routine.description ?? '');
-        setRows(routine.exercises.map(routineExerciseToRow));
+        setRows(plannedRoutineExercises(routine).map(routineExerciseToRow));
       })
       .catch((caught) => setError(caught instanceof Error ? caught.message : 'Error'))
       .finally(() => setLoading(false));

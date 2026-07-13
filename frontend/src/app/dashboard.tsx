@@ -9,6 +9,7 @@ import { ZenithScreen } from '@/components/ZenithScreen';
 import { routineAccents, zenith } from '@/constants/zenithTheme';
 import { formatRankScore } from '@/utils/rankDisplay';
 import { formatStatsValue } from '@/utils/statsDisplay';
+import { plannedRoutineExercises } from '@/utils/workoutDisplay';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -62,6 +63,7 @@ export default function DashboardScreen() {
   const totalSets = stats.reduce((total, item) => total + item.total_sets, 0);
   const finishedSessions = sessions.filter((session) => session.finished_at).length;
   const nextRoutine = routines[0];
+  const nextRoutineExercises = plannedRoutineExercises(nextRoutine);
   const username = user?.username ?? 'atleta';
   const initials = username.slice(0, 2).toUpperCase();
   const today = new Intl.DateTimeFormat('es', { day: '2-digit', month: 'short', weekday: 'short' }).format(new Date());
@@ -115,11 +117,11 @@ export default function DashboardScreen() {
             <Text style={styles.sessionKicker}>Proxima rutina</Text>
             <Text style={styles.sessionTitle}>{nextRoutine?.name ?? 'Crea tu primer plan'}</Text>
           </View>
-          <ZenithPill active>{nextRoutine ? `${nextRoutine.exercises.length} ejercicios` : 'Nuevo'}</ZenithPill>
+          <ZenithPill active>{nextRoutine ? `${nextRoutineExercises.length} ejercicios` : 'Nuevo'}</ZenithPill>
         </View>
         {nextRoutine ? (
           <View style={styles.exerciseList}>
-            {nextRoutine.exercises.slice(0, 4).map((exercise, index) => (
+            {nextRoutineExercises.slice(0, 4).map((exercise, index) => (
               <View key={exercise.id ?? `${exercise.exercise_id}-${exercise.position}`} style={styles.exerciseLine}>
                 <View style={[styles.exerciseDot, { backgroundColor: routineAccents[index % routineAccents.length] }]} />
                 <Text style={styles.exerciseName}>Ejercicio {exercise.position}</Text>

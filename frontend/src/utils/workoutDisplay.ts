@@ -11,6 +11,20 @@ export function routineName(routineId: string | null, routines: Routine[]) {
   return routines.find((routine) => routine.id === routineId)?.name ?? 'Rutina no disponible';
 }
 
+export function plannedRoutineExercises(routine: Routine | null | undefined) {
+  const value = (routine as { exercises?: unknown } | null | undefined)?.exercises;
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is RoutineExercise => {
+    if (typeof item !== 'object' || item === null) {
+      return false;
+    }
+    const exercise = item as Partial<RoutineExercise>;
+    return typeof exercise.exercise_id === 'string' && typeof exercise.position === 'number';
+  });
+}
+
 export function formatPlannedExercise(exercise: RoutineExercise) {
   const pieces: string[] = [];
   if (exercise.target_sets) {

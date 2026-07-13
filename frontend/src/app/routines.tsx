@@ -7,7 +7,7 @@ import { analyzeRoutineGoal, AuthExpiredError, Exercise, getExercises, getRoutin
 import { ZenithBottomNav, ZenithCard, ZenithHeader, ZenithIconButton, ZenithNotice, ZenithPill } from '@/components/ZenithUI';
 import { ZenithScreen } from '@/components/ZenithScreen';
 import { routineAccents, zenith } from '@/constants/zenithTheme';
-import { exerciseName, formatPlannedExercise } from '@/utils/workoutDisplay';
+import { exerciseName, formatPlannedExercise, plannedRoutineExercises } from '@/utils/workoutDisplay';
 
 export default function RoutinesScreen() {
   const { notice } = useLocalSearchParams();
@@ -122,6 +122,7 @@ export default function RoutinesScreen() {
 
       {routines.map((routine, index) => {
         const accent = routineAccents[index % routineAccents.length];
+        const plannedExercises = plannedRoutineExercises(routine);
         return (
           <ZenithCard key={routine.id} style={[styles.card, { borderLeftColor: accent }]}>
             <View style={styles.cardHeader}>
@@ -129,11 +130,12 @@ export default function RoutinesScreen() {
                 <Text style={styles.name}>{routine.name}</Text>
                 <Text style={styles.goal}>{routine.goal ?? 'Sin objetivo definido'}</Text>
               </View>
-              <ZenithPill color={accent}>{routine.exercises.length} ej.</ZenithPill>
+              <ZenithPill color={accent}>{plannedExercises.length} ej.</ZenithPill>
             </View>
 
             <View style={styles.exerciseList}>
-              {routine.exercises.slice(0, 5).map((planned) => (
+              {plannedExercises.length === 0 && <Text style={styles.emptyRoutineText}>Sin ejercicios planificados validos.</Text>}
+              {plannedExercises.slice(0, 5).map((planned) => (
                 <View key={planned.id ?? `${planned.exercise_id}-${planned.position}`} style={styles.exerciseRow}>
                   <View style={[styles.dot, { backgroundColor: accent }]} />
                   <Text style={styles.exerciseName}>{exerciseName(planned.exercise_id, exercises)}</Text>
@@ -176,6 +178,7 @@ const styles = StyleSheet.create({
   goal: { color: zenith.colors.muted, fontFamily: zenith.font.body, fontSize: 12 },
   exerciseList: { gap: 8 },
   exerciseRow: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  emptyRoutineText: { color: zenith.colors.muted, fontFamily: zenith.font.body, lineHeight: 20 },
   dot: { borderRadius: 999, height: 5, width: 5 },
   exerciseName: { color: zenith.colors.foreground, flex: 1, fontFamily: zenith.font.bodyMedium, fontSize: 13 },
   exerciseMeta: { color: zenith.colors.muted, fontFamily: zenith.font.mono, fontSize: 10 },

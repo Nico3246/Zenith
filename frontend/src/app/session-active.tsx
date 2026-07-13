@@ -11,7 +11,7 @@ import { ZenithCard, ZenithNotice } from '@/components/ZenithUI';
 import { ZenithScreen } from '@/components/ZenithScreen';
 import { zenith } from '@/constants/zenithTheme';
 import { buildWorkoutSets, SetRow, WeightUnit } from '@/utils/sessionForm';
-import { exerciseName, formatPlannedExercise } from '@/utils/workoutDisplay';
+import { exerciseName, formatPlannedExercise, plannedRoutineExercises } from '@/utils/workoutDisplay';
 import { progressionHintForExercise } from '@/utils/progression';
 
 const UNIT_OPTIONS = [
@@ -45,7 +45,7 @@ function newActiveSet(plannedKey: string, exerciseId: string, reps: string, inde
 }
 
 function buildRowsFromRoutine(routine: Routine): ActiveSetRow[] {
-  return [...routine.exercises]
+  return plannedRoutineExercises(routine)
     .sort((left, right) => left.position - right.position)
     .flatMap((planned) => {
       const plannedKey = routineExerciseKey(planned);
@@ -245,15 +245,15 @@ export default function ActiveSessionScreen() {
   }
 
   const completedCount = rows.filter((row) => row.completed).length;
-  const completedExerciseCount = routine
-    ? routine.exercises.filter((planned) => {
+  const plannedExercises = plannedRoutineExercises(routine);
+  const completedExerciseCount = plannedExercises
+    .filter((planned) => {
         const plannedKey = routineExerciseKey(planned);
         const exerciseRows = rows.filter((row) => row.plannedKey === plannedKey);
         return exerciseRows.length > 0 && exerciseRows.every((row) => row.completed);
-      }).length
-    : 0;
+      }).length;
   const activeRow = rows.find((row) => !row.completed) ?? null;
-  const activePlanned = routine && activeRow ? routine.exercises.find((planned) => routineExerciseKey(planned) === activeRow.plannedKey) ?? null : null;
+  const activePlanned = activeRow ? plannedExercises.find((planned) => routineExerciseKey(planned) === activeRow.plannedKey) ?? null : null;
   const activeExerciseRows = activeRow ? rows.filter((row) => row.plannedKey === activeRow.plannedKey) : [];
   const activeSetNumber = activeRow ? activeExerciseRows.findIndex((row) => row.key === activeRow.key) + 1 : 0;
   const weightStep = activeRow?.weight_unit === 'lb' ? 5 : 2.5;
@@ -280,7 +280,7 @@ export default function ActiveSessionScreen() {
           </View>
           {routine.goal && <Text style={styles.meta}>{routine.goal}</Text>}
           <Text style={styles.meta}>Inicio: {new Date(startedAt).toLocaleTimeString()}</Text>
-          <Text style={styles.meta}>Ejercicios: {completedExerciseCount}/{routine.exercises.length} | Series: {completedCount}/{rows.length}</Text>
+          <Text style={styles.meta}>Ejercicios: {completedExerciseCount}/{plannedExercises.length} | Series: {completedCount}/{rows.length}</Text>
           <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${rows.length > 0 ? (completedCount / rows.length) * 100 : 0}%` }]} /></View>
           {restRemaining > 0 && (
             <View style={styles.restBox}>
@@ -343,7 +343,7 @@ export default function ActiveSessionScreen() {
         <ZenithNotice tone="success">Todas las series estan completadas. Finaliza la sesion para guardar el entrenamiento.</ZenithNotice>
       )}
 
-      {routine && [...routine.exercises]
+      {routine && plannedExercises
         .sort((left, right) => left.position - right.position)
         .map((planned) => {
           const plannedKey = routineExerciseKey(planned);

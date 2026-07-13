@@ -7,7 +7,7 @@ import { Exercise, getExercises, getRoutines, getWorkoutSessions, Routine, Worko
 import { ZenithCard, ZenithHeader, ZenithIconButton, ZenithNotice, ZenithPill } from '@/components/ZenithUI';
 import { ZenithScreen } from '@/components/ZenithScreen';
 import { routineAccents, zenith } from '@/constants/zenithTheme';
-import { formatVolumeByUnit, routineName, uniqueExerciseNames } from '@/utils/workoutDisplay';
+import { formatVolumeByUnit, plannedRoutineExercises, routineName, uniqueExerciseNames } from '@/utils/workoutDisplay';
 
 export default function SessionsScreen() {
   const { notice } = useLocalSearchParams();
@@ -41,11 +41,12 @@ export default function SessionsScreen() {
       {!loading && !error && routines.length === 0 && <ZenithNotice>Aun no tienes rutinas. Crea una rutina para empezar entrenamientos guiados.</ZenithNotice>}
       {routines.map((routine, index) => {
         const accent = routineAccents[index % routineAccents.length];
+        const plannedExercises = plannedRoutineExercises(routine);
         return (
         <ZenithCard key={routine.id} style={[styles.card, { borderLeftColor: accent }]}>
           <Text style={styles.name}>{routine.name}</Text>
           {routine.goal && <Text style={styles.meta}>{routine.goal}</Text>}
-          <Text style={styles.meta}>{routine.exercises.length} ejercicios planificados</Text>
+          <Text style={styles.meta}>{plannedExercises.length} ejercicios planificados</Text>
           <Link href={{ pathname: '/session-active', params: { routineId: routine.id } }} style={[styles.action, { backgroundColor: accent }]}>Empezar rutina</Link>
         </ZenithCard>
         );

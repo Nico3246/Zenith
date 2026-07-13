@@ -5,7 +5,7 @@
     "description": "Gestion de rutinas, entrenamientos y progresion con entrenador IA revisable.",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/zenith-logo.png",
     "scheme": "zenith",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -14,11 +14,11 @@
     },
     "android": {
       "package": "com.zenith.training",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#09090e",
+        "foregroundImage": "./assets/images/zenith-logo.png",
+        "monochromeImage": "./assets/images/zenith-logo.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -35,9 +35,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#09090e",
+          "image": "./assets/images/zenith-logo.png",
+          "imageWidth": 160
         }
       ],
       "expo-secure-store"
@@ -45,6 +45,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2c049e9d-df06-465b-b740-b6b8df1e5e2e"
+      }
     }
   }
 }

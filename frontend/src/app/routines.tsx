@@ -9,6 +9,19 @@ import { ZenithScreen } from '@/components/ZenithScreen';
 import { routineAccents, zenith } from '@/constants/zenithTheme';
 import { exerciseName, formatPlannedExercise, plannedRoutineExercises } from '@/utils/workoutDisplay';
 
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
+  return (
+    <ZenithScreen bottomNav={<ZenithBottomNav />}>
+      <ZenithHeader title="Rutinas" subtitle="Error de pantalla" />
+      <ZenithNotice tone="danger">No se pudo mostrar Rutinas: {error.message}</ZenithNotice>
+      <Pressable onPress={retry} style={styles.retryButton}>
+        <Text style={styles.retryText}>Reintentar</Text>
+      </Pressable>
+      <Link href="/dashboard" style={styles.edit}>Volver al inicio</Link>
+    </ZenithScreen>
+  );
+}
+
 export default function RoutinesScreen() {
   const { notice } = useLocalSearchParams();
   const [routines, setRoutines] = useState<Routine[]>([]);

@@ -320,6 +320,158 @@ function appendStatsRange(params: URLSearchParams, periodFilter: StatsPeriodFilt
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function stringValue(value: unknown, fallback = '') {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function nullableStringValue(value: unknown) {
+  return typeof value === 'string' ? value : null;
+}
+
+function numberValue(value: unknown, fallback = 0) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function nullableNumberValue(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function normalizeNamedReferences(value: unknown): NamedReference[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    if (!isRecord(item) || typeof item.id !== 'string' || typeof item.name !== 'string') {
+      return [];
+    }
+    return [{ id: item.id, name: item.name }];
+  });
+}
+
+function normalizeExercise(value: unknown): Exercise | null {
+  if (!isRecord(value) || typeof value.id !== 'string' || typeof value.name !== 'string') {
+    return null;
+  }
+  return {
+    id: value.id,
+    name: value.name,
+    description: nullableStringValue(value.description),
+    difficulty: nullableStringValue(value.difficulty),
+    technique_notes: nullableStringValue(value.technique_notes),
+    is_global: typeof value.is_global === 'boolean' ? value.is_global : false,
+    created_by_user_id: nullableStringValue(value.created_by_user_id),
+    muscle_groups: normalizeNamedReferences(value.muscle_groups),
+    equipment: normalizeNamedReferences(value.equipment),
+    created_at: stringValue(value.created_at),
+    updated_at: stringValue(value.updated_at),
+  };
+}
+
+function normalizeExercises(value: unknown): Exercise[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => normalizeExercise(item) ?? []);
+}
+
+function normalizeRoutineExercise(value: unknown): RoutineExercise | null {
+  if (!isRecord(value) || typeof value.exercise_id !== 'string') {
+    return null;
+  }
+  return {
+    id: nullableStringValue(value.id) ?? undefined,
+    exercise_id: value.exercise_id,
+    position: numberValue(value.position, 1),
+    target_sets: nullableNumberValue(value.target_sets),
+    target_reps_min: nullableNumberValue(value.target_reps_min),
+    target_reps_max: nullableNumberValue(value.target_reps_max),
+    target_weight_value: nullableStringValue(value.target_weight_value),
+    target_weight_unit: value.target_weight_unit === 'kg' || value.target_weight_unit === 'lb' ? value.target_weight_unit : null,
+    target_rpe: nullableStringValue(value.target_rpe),
+    target_rir: nullableNumberValue(value.target_rir),
+    rest_seconds: nullableNumberValue(value.rest_seconds),
+    notes: nullableStringValue(value.notes),
+  };
+}
+
+function normalizeRoutineExercises(value: unknown): RoutineExercise[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => normalizeRoutineExercise(item) ?? []);
+}
+
+function normalizeRoutine(value: unknown): Routine | null {
+  if (!isRecord(value) || typeof value.id !== 'string') {
+    return null;
+  }
+  return {
+    id: value.id,
+    name: stringValue(value.name, 'Rutina sin nombre'),
+    goal: nullableStringValue(value.goal),
+    description: nullableStringValue(value.description),
+    exercises: normalizeRoutineExercises(value.exercises),
+  };
+}
+
+function normalizeRoutines(value: unknown): Routine[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => normalizeRoutine(item) ?? []);
+}
+
+function normalizeWorkoutSet(value: unknown): WorkoutSet | null {
+  if (!isRecord(value) || typeof value.exercise_id !== 'string') {
+    return null;
+  }
+  return {
+    id: nullableStringValue(value.id) ?? undefined,
+    exercise_id: value.exercise_id,
+    set_number: numberValue(value.set_number, 1),
+    reps: numberValue(value.reps, 0),
+    weight_value: nullableStringValue(value.weight_value),
+    weight_unit: value.weight_unit === 'kg' || value.weight_unit === 'lb' ? value.weight_unit : null,
+    rpe: nullableStringValue(value.rpe),
+    rir: nullableNumberValue(value.rir),
+    rest_seconds: nullableNumberValue(value.rest_seconds),
+    notes: nullableStringValue(value.notes),
+  };
+}
+
+function normalizeWorkoutSets(value: unknown): WorkoutSet[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => normalizeWorkoutSet(item) ?? []);
+}
+
+function normalizeWorkoutSession(value: unknown): WorkoutSession | null {
+  if (!isRecord(value) || typeof value.id !== 'string' || typeof value.started_at !== 'string') {
+    return null;
+  }
+  return {
+    id: value.id,
+    routine_id: nullableStringValue(value.routine_id),
+    started_at: value.started_at,
+    finished_at: nullableStringValue(value.finished_at),
+    timezone: stringValue(value.timezone, 'UTC'),
+    notes: nullableStringValue(value.notes),
+    sets: normalizeWorkoutSets(value.sets),
+  };
+}
+
+function normalizeWorkoutSessions(value: unknown): WorkoutSession[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => normalizeWorkoutSession(item) ?? []);
+}
+
 async function request<T>(path: string, options: RequestOptions = {}, retryOnUnauthorized = true): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const token = await getAccessToken();
@@ -498,11 +650,17 @@ export function recalculateRank() {
 }
 
 export function getExercises() {
-  return request<Exercise[]>('/exercises', { auth: true });
+  return request<unknown>('/exercises', { auth: true }).then(normalizeExercises);
 }
 
 export function getExercise(exerciseId: string) {
-  return request<Exercise>(`/exercises/${exerciseId}`, { auth: true });
+  return request<unknown>(`/exercises/${exerciseId}`, { auth: true }).then((item) => {
+    const exercise = normalizeExercise(item);
+    if (!exercise) {
+      throw new Error('El ejercicio recibido no es valido.');
+    }
+    return exercise;
+  });
 }
 
 export function createExercise(payload: ExercisePayload) {
@@ -518,11 +676,17 @@ export function getEquipment() {
 }
 
 export function getRoutines() {
-  return request<Routine[]>('/routines', { auth: true });
+  return request<unknown>('/routines', { auth: true }).then(normalizeRoutines);
 }
 
 export function getRoutine(routineId: string) {
-  return request<Routine>(`/routines/${routineId}`, { auth: true });
+  return request<unknown>(`/routines/${routineId}`, { auth: true }).then((item) => {
+    const routine = normalizeRoutine(item);
+    if (!routine) {
+      throw new Error('La rutina recibida no es valida.');
+    }
+    return routine;
+  });
 }
 
 export function createRoutine(payload: RoutinePayload) {
@@ -598,11 +762,17 @@ export function getSessionSummary(sessionId: string) {
 }
 
 export function getWorkoutSessions() {
-  return request<WorkoutSession[]>('/workout-sessions', { auth: true });
+  return request<unknown>('/workout-sessions', { auth: true }).then(normalizeWorkoutSessions);
 }
 
 export function getWorkoutSession(sessionId: string) {
-  return request<WorkoutSession>(`/workout-sessions/${sessionId}`, { auth: true });
+  return request<unknown>(`/workout-sessions/${sessionId}`, { auth: true }).then((item) => {
+    const session = normalizeWorkoutSession(item);
+    if (!session) {
+      throw new Error('La sesion recibida no es valida.');
+    }
+    return session;
+  });
 }
 
 export function createWorkoutSession(payload: WorkoutSessionPayload) {

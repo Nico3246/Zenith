@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Check, SkipForward } from 'lucide-react-native';
+import { Check, ChevronDown, ChevronUp, SkipForward } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -48,7 +48,7 @@ function buildRowsFromRoutine(routine: Routine): ActiveSetRow[] {
   return [...routine.exercises]
     .sort((left, right) => left.position - right.position)
     .flatMap((planned) => {
-      const plannedKey = planned.id ?? `${planned.exercise_id}-${planned.position}`;
+      const plannedKey = routineExerciseKey(planned);
       const setCount = Math.max(1, planned.target_sets ?? 1);
       return Array.from({ length: setCount }, (_, index) => ({
         ...newActiveSet(plannedKey, planned.exercise_id, planned.target_reps_min?.toString() ?? '10', index + 1),
@@ -57,6 +57,19 @@ function buildRowsFromRoutine(routine: Routine): ActiveSetRow[] {
         rest_seconds: planned.rest_seconds?.toString() ?? '',
       }));
     });
+}
+
+function routineExerciseKey(planned: Routine['exercises'][number]) {
+  return planned.id ?? `${planned.exercise_id}-${planned.position}`;
+}
+
+function numericInputValue(value: string, fallback: number) {
+  const parsed = Number(value.replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function formatAdjustedWeight(value: number) {
+  return Number.isInteger(value) ? value.toString() : value.toFixed(1);
 }
 
 function formatDuration(totalSeconds: number) {
@@ -95,40 +108,27 @@ export default function ActiveSessionScreen() {
     return () => clearInterval(timer);
   }, [restRemaining]);
 
-  /*useEffect(() => {
-    if (typeof window === 'undefined' || rows.every((row) => !row.completed)) {
+  useEffect(() => {
+    const hasCompletedRows = rows.some((row) => row.completed);
+
+    if (
+      Platform.OS !== 'web' ||
+      !hasCompletedRows ||
+      typeof window === 'undefined' ||
+      typeof window.addEventListener !== 'function' ||
+      typeof window.removeEventListener !== 'function'
+    ) {
       return;
     }
+
     const handler = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = '';
     };
+
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [rows]);*/
-
-  useEffect(() => {
-  const hasCompletedRows = rows.some((row) => row.completed);
-
-  if (
-    Platform.OS !== 'web' ||
-    !hasCompletedRows ||
-    typeof window === 'undefined' ||
-    typeof window.addEventListener !== 'function' ||
-    typeof window.removeEventListener !== 'function'
-  ) {
-    return;
-  }
-
-  const handler = (event: BeforeUnloadEvent) => {
-    event.preventDefault();
-    event.returnValue = '';
-  };
-
-  window.addEventListener('beforeunload', handler);
-  return () => window.removeEventListener('beforeunload', handler);
-}, [rows]);
-
+  }, [rows]);
 
   useEffect(() => {
     if (!id) {
@@ -178,6 +178,16 @@ export default function ActiveSessionScreen() {
     });
   }
 
+  function adjustReps(row: ActiveSetRow, delta: number) {
+    const nextReps = Math.max(1, Math.round(numericInputValue(row.reps, 1) + delta));
+    updateRow(row.key, { reps: nextReps.toString() });
+  }
+
+  function adjustWeight(row: ActiveSetRow, delta: number) {
+    const nextWeight = Math.max(0, numericInputValue(row.weight_value, 0) + delta);
+    updateRow(row.key, { weight_value: formatAdjustedWeight(nextWeight) });
+  }
+
   function toggleCompleted(row: ActiveSetRow, plannedRestSeconds: number | null | undefined) {
     const nextCompleted = !row.completed;
     updateRow(row.key, { completed: nextCompleted });
@@ -221,6 +231,7 @@ export default function ActiveSessionScreen() {
       await createWorkoutSession({
         routine_id: id,
         started_at: startedAt,
+        finished_at: new Date().toISOString(),
         timezone,
         notes: `Sesion guiada desde rutina: ${routine.name}`,
         sets: result.sets,
@@ -236,11 +247,16 @@ export default function ActiveSessionScreen() {
   const completedCount = rows.filter((row) => row.completed).length;
   const completedExerciseCount = routine
     ? routine.exercises.filter((planned) => {
-        const plannedKey = planned.id ?? `${planned.exercise_id}-${planned.position}`;
+        const plannedKey = routineExerciseKey(planned);
         const exerciseRows = rows.filter((row) => row.plannedKey === plannedKey);
         return exerciseRows.length > 0 && exerciseRows.every((row) => row.completed);
       }).length
     : 0;
+  const activeRow = rows.find((row) => !row.completed) ?? null;
+  const activePlanned = routine && activeRow ? routine.exercises.find((planned) => routineExerciseKey(planned) === activeRow.plannedKey) ?? null : null;
+  const activeExerciseRows = activeRow ? rows.filter((row) => row.plannedKey === activeRow.plannedKey) : [];
+  const activeSetNumber = activeRow ? activeExerciseRows.findIndex((row) => row.key === activeRow.key) + 1 : 0;
+  const weightStep = activeRow?.weight_unit === 'lb' ? 5 : 2.5;
 
   return (
     <ZenithScreen>
@@ -277,10 +293,60 @@ export default function ActiveSessionScreen() {
       )}
       {error && <ZenithNotice tone="danger">{error}</ZenithNotice>}
 
+      {routine && activeRow && activePlanned && (
+        <ZenithCard style={styles.activeSetCard}>
+          <View style={styles.activeSetHeader}>
+            <View>
+              <Text style={styles.activeEyebrow}>Serie {activeSetNumber} de {activeExerciseRows.length}</Text>
+              <Text style={styles.activeExercise}>{exerciseName(activePlanned.exercise_id, exercises)}</Text>
+            </View>
+            <Text style={styles.activeUnit}>{activeRow.weight_unit}</Text>
+          </View>
+          <View style={styles.quickControls}>
+            <View style={styles.quickColumn}>
+              <Text style={styles.quickLabel}>Peso</Text>
+              <Pressable onPress={() => adjustWeight(activeRow, weightStep)} style={styles.quickRoundButton}>
+                <ChevronUp color={zenith.colors.foreground} size={18} />
+              </Pressable>
+              <Text style={styles.quickValue}>{activeRow.weight_value || '0'}</Text>
+              <Pressable onPress={() => adjustWeight(activeRow, -weightStep)} style={styles.quickRoundButton}>
+                <ChevronDown color={zenith.colors.foreground} size={18} />
+              </Pressable>
+              <Text style={styles.quickUnit}>{activeRow.weight_unit}</Text>
+            </View>
+            <View style={styles.quickDivider} />
+            <View style={styles.quickColumn}>
+              <Text style={styles.quickLabel}>Reps</Text>
+              <Pressable onPress={() => adjustReps(activeRow, 1)} style={styles.quickRoundButton}>
+                <ChevronUp color={zenith.colors.foreground} size={18} />
+              </Pressable>
+              <Text style={styles.quickValue}>{activeRow.reps || '0'}</Text>
+              <Pressable onPress={() => adjustReps(activeRow, -1)} style={styles.quickRoundButton}>
+                <ChevronDown color={zenith.colors.foreground} size={18} />
+              </Pressable>
+              <Text style={styles.quickUnit}>reps</Text>
+            </View>
+          </View>
+          <View style={styles.activeActions}>
+            <Pressable onPress={() => copyPreviousSet(activeRow)} style={styles.activeSecondaryButton}>
+              <Text style={styles.activeSecondaryText}>Copiar anterior</Text>
+            </Pressable>
+            <Pressable onPress={() => toggleCompleted(activeRow, activePlanned.rest_seconds)} style={styles.activePrimaryButton}>
+              <Check color={zenith.colors.primaryForeground} size={16} />
+              <Text style={styles.activePrimaryText}>Registrar serie</Text>
+            </Pressable>
+          </View>
+        </ZenithCard>
+      )}
+
+      {routine && rows.length > 0 && completedCount === rows.length && (
+        <ZenithNotice tone="success">Todas las series estan completadas. Finaliza la sesion para guardar el entrenamiento.</ZenithNotice>
+      )}
+
       {routine && [...routine.exercises]
         .sort((left, right) => left.position - right.position)
         .map((planned) => {
-          const plannedKey = planned.id ?? `${planned.exercise_id}-${planned.position}`;
+          const plannedKey = routineExerciseKey(planned);
           const exerciseRows = rows.filter((row) => row.plannedKey === plannedKey);
           const exerciseCompleted = exerciseRows.length > 0 && exerciseRows.every((row) => row.completed);
           const hint = progressionHintForExercise(planned, previousSessions);
@@ -354,6 +420,23 @@ const styles = StyleSheet.create({
   restLabel: { color: zenith.colors.muted, fontFamily: zenith.font.mono, fontSize: 10, textTransform: 'uppercase' },
   skipRest: { alignItems: 'center', flexDirection: 'row', gap: 5, marginTop: 4 },
   skipRestText: { color: zenith.colors.muted, fontFamily: zenith.font.bodyMedium, fontSize: 12 },
+  activeSetCard: { alignItems: 'center', borderColor: zenith.colors.primaryBorder, gap: 18, paddingVertical: 20 },
+  activeSetHeader: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
+  activeEyebrow: { color: zenith.colors.primary, fontFamily: zenith.font.mono, fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase' },
+  activeExercise: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 34, lineHeight: 36, textTransform: 'uppercase' },
+  activeUnit: { backgroundColor: zenith.colors.primarySoft, borderRadius: 999, color: zenith.colors.primary, fontFamily: zenith.font.mono, fontSize: 11, overflow: 'hidden', paddingHorizontal: 10, paddingVertical: 5 },
+  quickControls: { alignItems: 'center', flexDirection: 'row', gap: 22, justifyContent: 'center', width: '100%' },
+  quickColumn: { alignItems: 'center', gap: 10, minWidth: 100 },
+  quickLabel: { color: zenith.colors.muted, fontFamily: zenith.font.mono, fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase' },
+  quickRoundButton: { alignItems: 'center', backgroundColor: zenith.colors.secondary, borderColor: zenith.colors.border, borderRadius: 999, borderWidth: 1, height: 42, justifyContent: 'center', width: 42 },
+  quickValue: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 44, lineHeight: 46, minWidth: 92, textAlign: 'center' },
+  quickUnit: { color: zenith.colors.muted, fontFamily: zenith.font.mono, fontSize: 11 },
+  quickDivider: { backgroundColor: zenith.colors.border, height: 140, width: 1 },
+  activeActions: { gap: 10, width: '100%' },
+  activeSecondaryButton: { alignItems: 'center', borderColor: zenith.colors.border, borderRadius: 14, borderWidth: 1, padding: 12 },
+  activeSecondaryText: { color: zenith.colors.muted, fontFamily: zenith.font.bodyBold },
+  activePrimaryButton: { alignItems: 'center', backgroundColor: zenith.colors.primary, borderRadius: 16, flexDirection: 'row', gap: 8, justifyContent: 'center', padding: 15 },
+  activePrimaryText: { color: zenith.colors.primaryForeground, fontFamily: zenith.font.bodyBold, fontSize: 16 },
   exerciseCard: { gap: 12 },
   exerciseCompletedCard: { borderColor: zenith.colors.cyan },
   exerciseTitle: { color: zenith.colors.foreground, fontFamily: zenith.font.display, fontSize: 25, lineHeight: 27, textTransform: 'uppercase' },

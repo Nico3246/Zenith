@@ -159,7 +159,7 @@ export default function RoutinesScreen() {
 
             <View style={styles.actions}>
               <Link href={{ pathname: '/session-active', params: { routineId: routine.id } }} asChild>
-                <Pressable style={[styles.startButton, { backgroundColor: accent }]}>
+                <Pressable style={StyleSheet.flatten([styles.startButton, { backgroundColor: accent }])}>
                   <Play color={zenith.colors.primaryForeground} fill={zenith.colors.primaryForeground} size={13} />
                   <Text style={styles.startText}>Iniciar</Text>
                 </Pressable>

@@ -47,7 +47,7 @@ export default function SessionsScreen() {
           <Text style={styles.name}>{routine.name}</Text>
           {routine.goal && <Text style={styles.meta}>{routine.goal}</Text>}
           <Text style={styles.meta}>{plannedExercises.length} ejercicios planificados</Text>
-          <Link href={{ pathname: '/session-active', params: { routineId: routine.id } }} style={[styles.action, { backgroundColor: accent }]}>Empezar rutina</Link>
+          <Link href={{ pathname: '/session-active', params: { routineId: routine.id } }} style={StyleSheet.flatten([styles.action, { backgroundColor: accent }])}>Empezar rutina</Link>
         </ZenithCard>
         );
       })}

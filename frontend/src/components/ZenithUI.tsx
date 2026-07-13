@@ -1,7 +1,7 @@
 import { Link, LinkProps, usePathname } from 'expo-router';
 import { BarChart3, Bot, ClipboardList, Dumbbell, Home, LucideIcon, Zap } from 'lucide-react-native';
 import { PropsWithChildren, ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
 
 import { zenith } from '@/constants/zenithTheme';
 
@@ -28,8 +28,8 @@ export function ZenithLogo({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export function ZenithCard({ children, style }: PropsWithChildren<{ style?: ViewStyle | ViewStyle[] }>) {
-  return <View style={[styles.card, style]}>{children}</View>;
+export function ZenithCard({ children, style }: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) {
+  return <View style={StyleSheet.flatten([styles.card, style])}>{children}</View>;
 }
 
 export function ZenithPill({ children, color, active }: PropsWithChildren<{ active?: boolean; color?: string }>) {
@@ -64,8 +64,8 @@ export function ZenithButton({ disabled, icon, onPress, title, variant = 'primar
   );
 }
 
-export function ZenithIconButton({ children, href, onPress, style }: PropsWithChildren<{ href?: LinkProps['href']; onPress?: () => void; style?: ViewStyle }>) {
-  const content = <View style={[styles.iconButton, style]}>{children}</View>;
+export function ZenithIconButton({ children, href, onPress, style }: PropsWithChildren<{ href?: LinkProps['href']; onPress?: () => void; style?: StyleProp<ViewStyle> }>) {
+  const content = <View style={StyleSheet.flatten([styles.iconButton, style])}>{children}</View>;
   if (href) {
     return <Link href={href} asChild><Pressable>{content}</Pressable></Link>;
   }
